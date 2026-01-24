@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Clandom.Views.RandomPage">
+    <UserControl.Styles>
+        <Style Selector="StackPanel">
+            <Setter Property="Spacing" Value="4"/>
+            <Setter Property="Orientation" Value="Horizontal"/>
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="Auto *" Margin="8" RowSpacing="4">
+        <StackPanel Grid.Row="0">
+            <TabStrip Theme="{StaticResource TabStripStyle}">
+                <TabStripItem x:Name="IsId" Theme="{StaticResource TabItemStyle}" Content="抽学号"/>
+                <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽行列"/>
+            </TabStrip>
+            <GridSplitter/>
+            <StackPanel IsVisible="{Binding #IsId.IsSelected}">
+                <TextBlock Text="范围："/>
+                <NumericUpDown x:Name="RMinId" Minimum="1" Maximum="10000" Value="1" Width="150" Increment="1"/>
+                <TextBlock Text="~"/>
+                <NumericUpDown x:Name="RMaxId" Minimum="2" Maximum="10001" Value="50" Width="150" Increment="1"/>
+            </StackPanel>
+            <StackPanel IsVisible="{Binding !#IsId.IsSelected}">
+                <TextBlock Text="行："/>
+                <NumericUpDown x:Name="RRaw" Minimum="1" Maximum="10000" Value="6" Width="150" Increment="1"/>
+                <TextBlock Text="列："/>
+                <NumericUpDown x:Name="RCol" Minimum="2" Maximum="10001" Value="8" Width="150" Increment="1"/>
+            </StackPanel>
+            <GridSplitter/>
+            <Button x:Name="Run" Content="来一个！" Click="Run_OnClick"/>
+        </StackPanel>
+        <TextBlock Grid.Row="1" x:Name="Result" Text="1" FontSize="200"/>
+    </Grid>
+</UserControl>
