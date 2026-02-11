@@ -1,4 +1,4 @@
-import { Stack, ToggleButton, ToggleButtonGroup, Button } from '@mui/material';
+import { Stack, ToggleButton, ToggleButtonGroup, Button, Alert, Grid } from '@mui/material';
 import Grid3x3RoundedIcon from '@mui/icons-material/Grid3x3Rounded';
 import FaceRoundedIcon from '@mui/icons-material/FaceRounded';
 import * as React from 'react';
@@ -19,8 +19,45 @@ const Item = styled(Paper)(({ theme }) => ({
   }),
 }));
 
-export default function drawPage() {
-  const [alignment, setAlignment] = React.useState<string | null>('left');
+export default function DrawPage() {
+  const [minId, setMinId] = React.useState<number>(1);
+  const [maxId, setMaxId] = React.useState<number>(50);
+  const [rowNum, setRowNum] = React.useState<number>(6);
+  const [colNum, setColNum] = React.useState<number>(8);
+  const [alignment, setAlignment] = React.useState<string | null>('idMode');
+  const [result, setResult] = React.useState<string>('等待抽取...');
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleMinId = (value: number | null, _: any) => {
+    if (value !== null) {
+      setMinId(value);
+      if (maxId <= value) {
+        setMaxId(value + 1);
+      }
+    }
+  };
+
+  const handleMaxId = (value: number | null, _: any) => {
+    if (value !== null) {
+      setMaxId(value);
+    }
+  };
+
+  const handleRowNum = (value: number | null, _: any) => {
+    if (value !== null) {
+      setRowNum(value);
+      if (colNum <= value) {
+        setColNum(value + 1);
+      }
+    }
+  };
+
+  const handleColNum = (value: number | null, _: any) => {
+    if (value !== null) {
+      setColNum(value);
+    }
+  };
 
   const handleAlignment = (
     _: React.MouseEvent<HTMLElement>,
@@ -29,12 +66,48 @@ export default function drawPage() {
     setAlignment(newAlignment);
   };
 
+  const handleDraw = async () => {
+    setLoading(true);
+    setError(null);
+    setResult('抽取中...');
+
+    try {
+      let res;
+      if (alignment === 'idMode') {
+        res = await invoke('draw_id', {
+          minId,
+          maxId
+        });
+      } else {
+        res = await invoke('draw_plane', {
+          rowNum,
+          colNum
+        });
+      }
+      setResult(`结果: ${res}`);
+    } catch (err: any) {
+      const errorMessage = err.toString();
+      setError(`错误: ${errorMessage}`);
+      setResult('抽取失败');
+
+      // 检查是否是 Tauri 环境问题
+      if (errorMessage.includes('undefined') || errorMessage.includes('invoke')) {
+        console.error('Tauri invoke 不可用，请确保在 Tauri 环境中运行');
+        console.error('当前运行环境:', typeof window !== 'undefined' ? '浏览器' : '未知');
+        console.error('window.__TAURI__ 存在?', !!(window as any).__TAURI__);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
-      <Stack spacing={2} direction={'column'}
+      <Grid container spacing={2} direction="column"
         sx={{
-            justifyContent: 'center'
-          }}>
+          justifyContent: "space-evenly",
+          alignItems: "center",
+        }}>
         <Stack direction={'row'} spacing={2}
           sx={{
             justifyContent: 'center',
@@ -49,38 +122,51 @@ export default function drawPage() {
               <Grid3x3RoundedIcon />
             </ToggleButton>
           </ToggleButtonGroup>
-          {alignment === 'idMode'?
-          (<IdRangeComponent />):
-          (<PlaneRangeComponent />)
+          {alignment === 'idMode' ?
+            (<IdRangeComponent minId={minId} maxId={maxId} handleMinId={handleMinId} handleMaxId={handleMaxId} />) :
+            (<PlaneRangeComponent rowNum={rowNum} colNum={colNum} handleRowNum={handleRowNum} handleColNum={handleColNum} />)
           }
-          <Button variant="contained" onClick={
-            () => {
-              
-            }
-          }>Contained</Button>
+          <Button
+            variant="contained"
+            onClick={handleDraw}
+            disabled={loading}
+          >
+            抽！
+          </Button>
         </Stack>
-      </Stack>
+
+        <Grid size="grow">
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Item sx={{
+            flexGrow: 1,
+            minHeight: 60,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.2rem',
+            fontWeight: 'bold'
+          }}>
+            {result}
+          </Item>
+        </Grid>
+      </Grid>
     </>
   );
 }
 
-function IdRangeComponent() {
-  const [minId, setMinId] = React.useState<number>(1);
-  const [maxId, setMaxId] = React.useState<number>(50);
+interface IdRangeComponentProps {
+  minId: number;
+  maxId: number;
+  handleMinId: (value: number | null, _: any) => void;
+  handleMaxId: (value: number | null, _: any) => void;
+}
 
-  const handleMinId = (value: number | null, _: any) => {
-    if (value !== null) {
-      setMinId(value);
-      if(maxId <= value) {
-        setMaxId(value + 1);
-      }
-    }
-  }
-  const handleMaxId = (value: number | null, _: any) => {
-    if (value !== null) {
-      setMaxId(value);
-    }
-  }
+function IdRangeComponent({ minId, maxId, handleMinId, handleMaxId }: IdRangeComponentProps) {
   return (
     <>
       <NumberSpinner
@@ -103,23 +189,14 @@ function IdRangeComponent() {
   )
 }
 
-function PlaneRangeComponent() {
-  const [rowNum, setRowNum] = React.useState<number>(6);
-  const [colNum, setColNum] = React.useState<number>(8);
+interface PlaneRangeComponentProps {
+  rowNum: number;
+  colNum: number;
+  handleRowNum: (value: number | null, _: any) => void;
+  handleColNum: (value: number | null, _: any) => void;
+}
 
-  const handleRowNum = (value: number | null, _: any) => {
-    if (value !== null) {
-      setRowNum(value);
-      if(colNum <= value) {
-        setColNum(value + 1);
-      }
-    }
-  }
-  const handleColNum = (value: number | null, _: any) => {
-    if (value !== null) {
-      setColNum(value);
-    }
-  }
+function PlaneRangeComponent({ rowNum, colNum, handleRowNum, handleColNum }: PlaneRangeComponentProps) {
   return (
     <>
       <NumberSpinner

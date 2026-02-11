@@ -9,6 +9,9 @@ import Box from '@mui/material/Box';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import DrawPage from './Pages/DrawPage';
+import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
+import TimelineRoundedIcon from '@mui/icons-material/TimelineRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 
 export default function App() {
   return (
@@ -19,17 +22,22 @@ export default function App() {
   );
 }
 
-interface CustomTabPanelProps {
+interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
   value: number;
 }
 
-function CustomTabPanel(props: CustomTabPanelProps) {
+function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
   return (
     <div
+      style={{
+        flex: 1,
+        overflow: 'auto',
+        padding: '20px'
+      }}
       role="tabpanel"
       hidden={value !== index}
       id={`tabpanel-${index}`}
@@ -66,23 +74,31 @@ function Context() {
   };
 
   return (
-    <>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={value} onChange={handleChange} aria-label="basic tabs example" centered>
-          <Tab label="抽取" {...a11yProps(0)} />
-          <Tab label="统计" {...a11yProps(1)} />
-          <Tab label="设置" {...a11yProps(2)} />
-        </Tabs>
-      </Box>
-      <CustomTabPanel value={value} index={0}>
+    <Box sx={{
+      flexGrow: 1,
+      display: 'flex',
+      width: '100vw',
+      height: '100vh',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      overflow: 'hidden',
+      bgcolor: 'background.paper'
+    }}>
+      <Tabs value={value} onChange={handleChange} orientation='vertical' aria-label="Clandom选项" centered>
+        <Tab icon={<SyncRoundedIcon />} label="抽取" {...a11yProps(0)} />
+        <Tab icon={<TimelineRoundedIcon />} label="统计" {...a11yProps(1)} />
+        <Tab icon={<SettingsRoundedIcon />} label="设置" {...a11yProps(2)} />
+      </Tabs>
+      <TabPanel value={value} index={0}>
         <DrawPage />
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={1}>
+      </TabPanel>
+      <TabPanel value={value} index={1}>
         Item Two
-      </CustomTabPanel>
-      <CustomTabPanel value={value} index={2}>
+      </TabPanel>
+      <TabPanel value={value} index={2}>
         Item Three
-      </CustomTabPanel>
-    </>
+      </TabPanel>
+    </Box>
   )
 }
