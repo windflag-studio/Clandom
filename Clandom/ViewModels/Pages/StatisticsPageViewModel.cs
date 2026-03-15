@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using LiveChartsCore;
 using LiveChartsCore.SkiaSharpView;
 
-namespace Clandom.ViewModels;
+namespace Clandom.ViewModels.Pages;
 
 partial class StatisticsPageViewModel : ViewModelBase
 {

@@ -7,7 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Clandom.Models.BalancedRandom;
-using Clandom.ViewModels;
+using Clandom.ViewModels.Pages;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Clandom.Views.Pages;
@@ -55,39 +55,30 @@ public partial class StatisticsPage : UserControl
         {
             try
             {
-                var countsDict = BalancedRandDataManager.GetDrawCountsByPlaneRange(
-                    _planeData[PlaneStatisticsComboBox.SelectedIndex]);
-                var weightsDict = BalancedRandDataManager.GetWeightsByPlaneRange(
-                    _planeData[PlaneStatisticsComboBox.SelectedIndex]);
-                
-                // 将字典转换为有序数组
+                var range = _planeData[PlaneStatisticsComboBox.SelectedIndex];
+                int rows = range[0], cols = range[1];
+
+                var countsDict = BalancedRandDataManager.GetDrawCountsByPlaneRange(range);
+                var weightsDict = BalancedRandDataManager.GetWeightsByPlaneRange(range);
+
                 var orderedCounts = new List<int>();
                 var orderedWeights = new List<double>();
                 var orderedLabels = new List<string>();
-                
-                // 按行列顺序排序
-                var rows = _planeData[PlaneStatisticsComboBox.SelectedIndex][0];
-                var cols = _planeData[PlaneStatisticsComboBox.SelectedIndex][1];
-                
-                for (int row = 0; row < rows; row++)
+
+                for (int r = 1; r <= rows; r++)
                 {
-                    for (int col = 0; col < cols; col++)
+                    for (int c = 1; c <= cols; c++)
                     {
-                        var key = new List<int> { col, row }; // 注意: GetPlaneConfigDrawCounts 返回的是 [col, row]
-                        if (countsDict.TryGetValue(key, out var count))
-                            orderedCounts.Add(count);
-                        else
-                            orderedCounts.Add(0);
-                            
-                        if (weightsDict.TryGetValue(key, out var weight))
-                            orderedWeights.Add(weight);
-                        else
-                            orderedWeights.Add(0);
-                            
-                        orderedLabels.Add($"[{row+1},{col+1}]");
+                        countsDict.TryGetValue((r, c), out int count);
+                        orderedCounts.Add(count);
+
+                        weightsDict.TryGetValue((r, c), out double weight);
+                        orderedWeights.Add(weight);
+
+                        orderedLabels.Add($"[{r},{c}]");
                     }
                 }
-                
+
                 StatisticsPageViewModel.PlaneCountsData = orderedCounts.ToArray();
                 StatisticsPageViewModel.PlaneWeightData = orderedWeights.ToArray();
                 (DataContext as StatisticsPageViewModel).PlaneLabelData = orderedLabels.ToArray();

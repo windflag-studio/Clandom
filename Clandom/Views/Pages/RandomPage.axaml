@@ -2,8 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vmp="clr-namespace:Clandom.ViewModels.Pages"
              mc:Ignorable="d" d:DesignWidth="637" d:DesignHeight="450"
-             x:Class="Clandom.Views.Pages.RandomPage">
+             x:Class="Clandom.Views.Pages.RandomPage" x:DataType="vmp:RandomPageViewModel">
     <UserControl.Styles>
         <Style Selector="StackPanel">
             <Setter Property="Spacing" Value="4"/>

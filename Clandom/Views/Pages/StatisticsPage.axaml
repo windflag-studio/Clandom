@@ -2,10 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:vm="clr-namespace:Clandom.ViewModels"
+             xmlns:vmp="clr-namespace:Clandom.ViewModels.Pages"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Avalonia;assembly=LiveChartsCore.SkiaSharpView.Avalonia"
              mc:Ignorable="d" d:DesignWidth="637" d:DesignHeight="450"
-             x:Class="Clandom.Views.Pages.StatisticsPage" x:DataType="vm:StatisticsPageViewModel"
+             x:Class="Clandom.Views.Pages.StatisticsPage" x:DataType="vmp:StatisticsPageViewModel"
              Loaded="Control_OnLoaded">
     
     <UserControl.Styles>
@@ -18,10 +18,10 @@
     </UserControl.Styles>
     
     <UserControl.DataContext>
-        <vm:StatisticsPageViewModel/>
+        <vmp:StatisticsPageViewModel/>
     </UserControl.DataContext>
     
-    <Grid RowDefinitions="Auto *" Margin="12" RowSpacing="4">
+    <Grid RowDefinitions="Auto *" Margin="8" RowSpacing="4">
         <TextBlock Grid.Row="0" Text="统计" FontSize="30" HorizontalAlignment="Left"/>
         <Grid Grid.Row="1"
               ColumnDefinitions="* *" RowDefinitions="Auto * *" 

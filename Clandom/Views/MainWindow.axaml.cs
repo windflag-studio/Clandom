@@ -2,6 +2,8 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Clandom.Service.Settings;
+using Clandom.ViewModels;
 using FluentAvalonia.UI.Controls;
 
 namespace Clandom.Views;
@@ -20,7 +22,8 @@ public partial class MainWindow : Window
     {
         if (e.IsSettingsSelected)
         {
-            
+            var page = Activator.CreateInstance(Type.GetType("Clandom.Views.Pages.SettingsPage") ?? throw new InvalidOperationException());
+            (sender as NavigationView).Content = page;
         }
         else if (e.SelectedItem is NavigationViewItem item)
         {
@@ -28,5 +31,10 @@ public partial class MainWindow : Window
             var page = Activator.CreateInstance(Type.GetType(prePage) ?? throw new InvalidOperationException());
             (sender as NavigationView).Content = page;
         }
+    }
+
+    private void TopLevel_OnClosed(object? sender, EventArgs e)
+    {
+        SettingsManager.Save((DataContext as MainWindowViewModel).Settings);
     }
 }

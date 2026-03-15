@@ -9,7 +9,7 @@
         x:Class="Clandom.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Clandom">
+        Title="Clandom" Closed="TopLevel_OnClosed">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
