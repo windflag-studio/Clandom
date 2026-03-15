@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Clandom.ViewModels"
+        xmlns:ui="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Clandom.Views.FloatingWindow" x:DataType="vm:FloatingWindowViewModel"
         PointerPressed="InputElement_OnPointerPressed"
@@ -14,10 +15,16 @@
         ShowInTaskbar="False"
         Topmost="True"
         Title="Float">
-    <Grid Background="{StaticResource ToolTipBackground}">
-        <TextBlock Text="这里是内容"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Foreground="{StaticResource TextControlForeground}"/>
-    </Grid>
+    <!-- <Window.Resources> -->
+    <!--     <ui:SymbolIconSource x:Key="FDraw" Symbol="People"/> -->
+    <!-- </Window.Resources> -->
+    <StackPanel Margin="4" Spacing="2" Orientation="Horizontal" Background="{StaticResource ToolTipBackground}">
+        <ui:FontIcon Glyph="I" FontSize="18" FontFamily="$Default" FontWeight="Normal" FontStyle="Normal" />
+        <Button Classes="accent" Click="RunButton_OnClick">
+            <ui:SymbolIcon Symbol="People" FontSize="18" />
+        </Button>
+        <Button Click="CloseButton_OnClick">
+            <ui:SymbolIcon Symbol="Cancel" FontSize="18" />
+        </Button>
+    </StackPanel>
 </Window>

@@ -27,7 +27,7 @@ public partial class RandomPage : UserControl
         }
         else
         {
-            var randIdPlane = new BalancedRandPlane((int)RRaw.Value, (int)RCol.Value);
+            var randIdPlane = new BalancedRandPlane((int)RRow.Value, (int)RCol.Value);
             var pos = randIdPlane.DrawPosition();
             Result.Text = $"行:{pos.row} 列:{pos.col}";
         }
