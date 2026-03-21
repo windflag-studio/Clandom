@@ -26,7 +26,6 @@ public class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             Settings = SettingsManager.Load();
-            ViewModelBase.DefaultSettings = Settings;
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
@@ -52,6 +51,7 @@ public class App : Application
             BindingPlugins.DataValidators.Remove(plugin);
         }
     }
+
     private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
         if (Settings != null)

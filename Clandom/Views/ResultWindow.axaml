@@ -2,23 +2,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:control="using:Clandom.Control"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         Width="400" Height="300" Deactivated="WindowBase_OnDeactivated"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource SystemControlBackgroundBaseLowBrush}"
         Loaded="Control_OnLoaded"
+        SizeToContent="WidthAndHeight"
         SystemDecorations="None" Topmost="True"
         x:Class="Clandom.Views.ResultWindow"
         Title="ResultWindow">
-    <Grid>
-        <!-- <Border Margin="10" -->
-        <!--         Padding="20"> -->
-        <!--     <control:AutoSizingTextView x:Name="Result"/> -->
-        <!-- </Border> -->
-        <TextBlock Text="1" x:Name="Result" FontSize="150"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Foreground="{StaticResource SystemControlForegroundBaseHighBrush}"/>
-    </Grid>
+    <TextBlock Text="1" x:Name="Result" Margin="20"
+               FontSize="150" TextWrapping="NoWrap"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Foreground="{StaticResource SystemControlForegroundBaseHighBrush}" />
 </Window>
