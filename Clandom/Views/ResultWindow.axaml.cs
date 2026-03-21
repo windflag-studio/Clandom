@@ -28,12 +28,12 @@ public partial class ResultWindow : Window
         {
             return;
         }
-        if (settings.IsIdMode)
+        if (settings.SelectedMode==0)
         {
             var randId = new BalancedRand((int)settings.MinId, (int)settings.MaxId);
             Result.Text = randId.Draw().ToString();
         }
-        else
+        else if(settings.SelectedMode==1)
         {
             var randIdPlane = new BalancedRandPlane((int)settings.Row, (int)settings.Col);
             var pos = randIdPlane.DrawPosition();

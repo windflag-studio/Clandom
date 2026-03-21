@@ -20,12 +20,12 @@ public partial class RandomPage : UserControl
         {
             return;
         }
-        if (IsId.IsSelected)
+        if (Mode.SelectedIndex==0)
         {
             var randId = new BalancedRand((int)RMinId.Value, (int)RMaxId.Value);
             Result.Text = randId.Draw().ToString();
         }
-        else
+        else if(Mode.SelectedIndex==1)
         {
             var randIdPlane = new BalancedRandPlane((int)RRow.Value, (int)RCol.Value);
             var pos = randIdPlane.DrawPosition();
