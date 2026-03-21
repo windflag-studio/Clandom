@@ -32,9 +32,4 @@ public partial class MainWindow : Window
             (sender as NavigationView).Content = page;
         }
     }
-
-    private void TopLevel_OnClosed(object? sender, EventArgs e)
-    {
-        SettingsManager.Save((DataContext as MainWindowViewModel).Settings);
-    }
 }

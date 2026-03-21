@@ -4,16 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
-        mc:Ignorable="d" d:DesignWidth="659" d:DesignHeight="580"
-        MinWidth="659" MinHeight="580"
+        mc:Ignorable="d" d:DesignWidth="660" d:DesignHeight="580"
+        MinWidth="660" MinHeight="580"
+        Width="{Binding Settings.MainWindowWidth,Mode=TwoWay}"
+        Height="{Binding Settings.MainWindowHeight,Mode=TwoWay}"
         x:Class="Clandom.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Clandom" Closed="TopLevel_OnClosed">
-
-    <Design.DataContext>
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
+        Title="Clandom">
     <Window.Resources>
         <ui:SymbolIconSource x:Key="FRandom" Symbol="Sync"/>
         <ui:SymbolIconSource x:Key="FStatistics" Symbol="ContactInfo"/>

@@ -13,7 +13,7 @@ public partial class FloatingWindow : Window
         InitializeComponent();
     }
 
-    private void InputElement_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    private void TitleBar_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         BeginMoveDrag(e);
     }

@@ -23,19 +23,19 @@ public partial class ResultWindow : Window
 
     private void Control_OnLoaded(object? sender, RoutedEventArgs e)
     {
-        var Settings = SettingsManager.Load();
-        if (Settings.MinId >= Settings.MaxId)
+        var settings = SettingsManager.Load();
+        if (settings.MinId >= settings.MaxId)
         {
             return;
         }
-        if (Settings.IsIdMode)
+        if (settings.IsIdMode)
         {
-            var randId = new BalancedRand((int)Settings.MinId, (int)Settings.MaxId);
+            var randId = new BalancedRand((int)settings.MinId, (int)settings.MaxId);
             Result.Text = randId.Draw().ToString();
         }
         else
         {
-            var randIdPlane = new BalancedRandPlane((int)Settings.Row, (int)Settings.Col);
+            var randIdPlane = new BalancedRandPlane((int)settings.Row, (int)settings.Col);
             var pos = randIdPlane.DrawPosition();
             Result.Text = $"行:{pos.row} 列:{pos.col}";
         }

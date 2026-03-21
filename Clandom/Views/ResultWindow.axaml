@@ -7,7 +7,7 @@
         Width="400" Height="300" Deactivated="WindowBase_OnDeactivated"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource SystemControlBackgroundBaseLowBrush}"
-        TransparencyLevelHint="Transparent" Loaded="Control_OnLoaded"
+        Loaded="Control_OnLoaded"
         SystemDecorations="None" Topmost="True"
         x:Class="Clandom.Views.ResultWindow"
         Title="ResultWindow">

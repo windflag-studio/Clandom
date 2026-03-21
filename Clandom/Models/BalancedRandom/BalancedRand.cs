@@ -388,7 +388,7 @@ namespace Clandom.Models.BalancedRandom
         public class BalancedRand
         {
             // 内部数据结构
-            internal Dictionary<int, int> _drawCounts; // 学号 -> 抽取次数
+            internal Dictionary<int, int> DrawCounts; // 学号 -> 抽取次数
             private Dictionary<int, int> _lastDrawRound; // 学号 -> 最后被抽中的轮次
             private List<int> _allNumbers; // 所有学号
             private List<int>? _candidatePool; // 当前候选池
@@ -403,7 +403,7 @@ namespace Clandom.Models.BalancedRandom
 
             // 统计信息
             private int _totalDraws;
-            internal Dictionary<int, double> _currentProbabilities;
+            internal Dictionary<int, double> CurrentProbabilities;
 
             // 数据标识和类型
             private string _dataId;
@@ -441,7 +441,7 @@ namespace Clandom.Models.BalancedRandom
                     throw new ArgumentException("最小候选池大小必须大于0");
 
                 _allNumbers = Enumerable.Range(numberRangeStart, numberRangeEnd - numberRangeStart + 1).ToList();
-                _drawCounts = _allNumbers.ToDictionary(n => n, _ => 0);
+                DrawCounts = _allNumbers.ToDictionary(n => n, _ => 0);
                 _lastDrawRound = _allNumbers.ToDictionary(n => n, _ => -1); // -1表示从未被抽中
                 _random = new Random(Guid.NewGuid().GetHashCode());
                 _currentRound = 0;
@@ -450,7 +450,7 @@ namespace Clandom.Models.BalancedRandom
                 _coldStartBoost = coldStartBoost;
                 _decayFactor = decayFactor;
                 _totalDraws = 0;
-                _currentProbabilities = new Dictionary<int, double>();
+                CurrentProbabilities = new Dictionary<int, double>();
 
                 // 保存构造函数参数
                 _numberRangeStart = numberRangeStart;
@@ -490,7 +490,7 @@ namespace Clandom.Models.BalancedRandom
                     throw new ArgumentException("学号列表不能为空");
 
                 _allNumbers = enumerable.Distinct().ToList();
-                _drawCounts = _allNumbers.ToDictionary(n => n, _ => 0);
+                DrawCounts = _allNumbers.ToDictionary(n => n, _ => 0);
                 _lastDrawRound = _allNumbers.ToDictionary(n => n, _ => -1);
                 _random = new Random(Guid.NewGuid().GetHashCode());
                 _currentRound = 0;
@@ -499,7 +499,7 @@ namespace Clandom.Models.BalancedRandom
                 _coldStartBoost = coldStartBoost;
                 _decayFactor = decayFactor;
                 _totalDraws = 0;
-                _currentProbabilities = new Dictionary<int, double>();
+                CurrentProbabilities = new Dictionary<int, double>();
 
                 // 保存构造函数参数
                 _numbersList = new List<int>(_allNumbers);
@@ -547,9 +547,9 @@ namespace Clandom.Models.BalancedRandom
                 // 只加载当前范围内的数据
                 foreach (var kvp in savedData.DrawCounts)
                 {
-                    if (_drawCounts.ContainsKey(kvp.Key))
+                    if (DrawCounts.ContainsKey(kvp.Key))
                     {
-                        _drawCounts[kvp.Key] = kvp.Value;
+                        DrawCounts[kvp.Key] = kvp.Value;
                     }
                 }
 
@@ -566,9 +566,9 @@ namespace Clandom.Models.BalancedRandom
 
                 foreach (var kvp in savedData.CurrentProbabilities)
                 {
-                    if (_currentProbabilities.ContainsKey(kvp.Key))
+                    if (CurrentProbabilities.ContainsKey(kvp.Key))
                     {
-                        _currentProbabilities[kvp.Key] = kvp.Value;
+                        CurrentProbabilities[kvp.Key] = kvp.Value;
                     }
                 }
 
@@ -603,11 +603,11 @@ namespace Clandom.Models.BalancedRandom
                     {
                         Id = _dataId,
                         LastUpdated = DateTime.Now,
-                        DrawCounts = new Dictionary<int, int>(_drawCounts),
+                        DrawCounts = new Dictionary<int, int>(DrawCounts),
                         LastDrawRound = new Dictionary<int, int>(_lastDrawRound),
                         CurrentRound = _currentRound,
                         TotalDraws = _totalDraws,
-                        CurrentProbabilities = new Dictionary<int, double>(_currentProbabilities),
+                        CurrentProbabilities = new Dictionary<int, double>(CurrentProbabilities),
                         MinPoolSize = _minPoolSize,
                         MaxGapThreshold = _maxGapThreshold,
                         ColdStartBoost = _coldStartBoost,
@@ -890,14 +890,14 @@ namespace Clandom.Models.BalancedRandom
                 int selectedNumber = WeightedRandomSelect(weights);
 
                 // 更新抽取记录
-                if (_drawCounts.ContainsKey(selectedNumber))
+                if (DrawCounts.ContainsKey(selectedNumber))
                 {
-                    _drawCounts[selectedNumber]++;
+                    DrawCounts[selectedNumber]++;
                 }
                 else
                 {
                     // 如果是白名单中的额外学号，需要初始化
-                    _drawCounts[selectedNumber] = 1;
+                    DrawCounts[selectedNumber] = 1;
                     if (!_lastDrawRound.ContainsKey(selectedNumber))
                     {
                         _lastDrawRound[selectedNumber] = -1;
@@ -957,7 +957,7 @@ namespace Clandom.Models.BalancedRandom
 
                 return allNumbersWithWhitelist
                     .OrderBy(n => n)
-                    .Select(n => _drawCounts.TryGetValue(n, out var count) ? count : 0)
+                    .Select(n => DrawCounts.TryGetValue(n, out var count) ? count : 0)
                     .ToList();
             }
 
@@ -972,7 +972,7 @@ namespace Clandom.Models.BalancedRandom
 
                 return allNumbersWithWhitelist
                     .OrderBy(n => n)
-                    .Select(n => _currentProbabilities.TryGetValue(n, out var prob) ? prob : 0)
+                    .Select(n => CurrentProbabilities.TryGetValue(n, out var prob) ? prob : 0)
                     .ToList();
             }
 
@@ -984,14 +984,14 @@ namespace Clandom.Models.BalancedRandom
                 // 重置原始学号范围的抽取次数
                 foreach (var number in _allNumbers)
                 {
-                    _drawCounts[number] = 0;
+                    DrawCounts[number] = 0;
                     _lastDrawRound[number] = -1;
                 }
 
                 // 重置白名单学号的抽取次数
                 foreach (var number in _whitelist)
                 {
-                    _drawCounts[number] = 0;
+                    DrawCounts[number] = 0;
                     _lastDrawRound[number] = -1;
                 }
 
@@ -1025,7 +1025,7 @@ namespace Clandom.Models.BalancedRandom
                 double total = 0;
                 foreach (var number in allActiveNumbers)
                 {
-                    total += _drawCounts.TryGetValue(number, out var count) ? count : 0;
+                    total += DrawCounts.TryGetValue(number, out var count) ? count : 0;
                 }
 
                 return total / allActiveNumbers.Count;
@@ -1043,7 +1043,7 @@ namespace Clandom.Models.BalancedRandom
                 if (allActiveNumbers.Count == 0) return 0;
 
                 var activeDrawCounts = allActiveNumbers
-                    .Select(n => _drawCounts.TryGetValue(n, out var count) ? count : 0)
+                    .Select(n => DrawCounts.TryGetValue(n, out var count) ? count : 0)
                     .ToList();
 
                 int max = activeDrawCounts.Max();
@@ -1094,27 +1094,27 @@ namespace Clandom.Models.BalancedRandom
 
                     // 平均值过滤 - 只选择抽取次数≤平均值的成员
                     candidates = _allNumbers
-                        .Where(n => _drawCounts[n] <= Math.Ceiling(average)) // 向上取整，增加容错
+                        .Where(n => DrawCounts[n] <= Math.Ceiling(average)) // 向上取整，增加容错
                         .ToList();
 
                     // 最大差距保护
                     if (GetMaxDrawCountGap() > _maxGapThreshold)
                     {
                         // 排除极值并重新计算
-                        int maxCount = _drawCounts.Values.Max();
-                        int minCount = _drawCounts.Values.Min();
+                        int maxCount = DrawCounts.Values.Max();
+                        int minCount = DrawCounts.Values.Min();
 
                         // 排除抽取次数最多和最少的成员
                         candidates = candidates
-                            .Where(n => _drawCounts[n] != maxCount && _drawCounts[n] != minCount)
+                            .Where(n => DrawCounts[n] != maxCount && DrawCounts[n] != minCount)
                             .ToList();
 
                         // 重新计算排除极值后的平均值
                         if (candidates.Any())
                         {
-                            double newAverage = candidates.Average(n => _drawCounts[n]);
+                            double newAverage = candidates.Average(n => DrawCounts[n]);
                             candidates = candidates
-                                .Where(n => _drawCounts[n] <= Math.Ceiling(newAverage))
+                                .Where(n => DrawCounts[n] <= Math.Ceiling(newAverage))
                                 .ToList();
                         }
                     }
@@ -1146,7 +1146,7 @@ namespace Clandom.Models.BalancedRandom
                         .ToList();
 
                     var allSorted = allAvailableNumbers
-                        .OrderBy(n => _drawCounts.TryGetValue(n, out var count) ? count : 0)
+                        .OrderBy(n => DrawCounts.TryGetValue(n, out var count) ? count : 0)
                         .ThenBy(n => _lastDrawRound.TryGetValue(n, out var round) ? round : int.MaxValue) // 长期未抽中的优先
                         .ToList();
 
@@ -1181,7 +1181,7 @@ namespace Clandom.Models.BalancedRandom
                         double weight = 1.0;
 
                         // 获取抽取次数（白名单中的学号可能没有记录）
-                        int drawCount = _drawCounts.TryGetValue(number, out var count) ? count : 0;
+                        int drawCount = DrawCounts.TryGetValue(number, out var count) ? count : 0;
 
                         // 避免重复抽取
                         weight *= Math.Pow(_decayFactor, drawCount);
@@ -1253,7 +1253,7 @@ namespace Clandom.Models.BalancedRandom
             /// </summary>
             private void UpdateProbabilities()
             {
-                _currentProbabilities.Clear();
+                CurrentProbabilities.Clear();
 
                 if (_candidatePool != null && _candidatePool.Count == 0) return;
 
@@ -1262,7 +1262,7 @@ namespace Clandom.Models.BalancedRandom
 
                 foreach (var kvp in weights)
                 {
-                    _currentProbabilities[kvp.Key] = kvp.Value / totalWeight;
+                    CurrentProbabilities[kvp.Key] = kvp.Value / totalWeight;
                 }
 
                 // 为不在候选池中的成员设置概率为0
@@ -1272,7 +1272,7 @@ namespace Clandom.Models.BalancedRandom
                 foreach (var number in
                          allActiveNumbers.Where(n => _candidatePool != null && !_candidatePool.Contains(n)))
                 {
-                    _currentProbabilities[number] = 0;
+                    CurrentProbabilities[number] = 0;
                 }
             }
 
@@ -1457,7 +1457,7 @@ namespace Clandom.Models.BalancedRandom
                 var list = new List<int>();
                 for (int i = 0; i < _rows * _cols; i++)
                 {
-                    int count = _drawCounts.TryGetValue(i, out var val) ? val : 0;
+                    int count = DrawCounts.TryGetValue(i, out var val) ? val : 0;
                     list.Add(count);
                 }
 
@@ -1472,7 +1472,7 @@ namespace Clandom.Models.BalancedRandom
                 var list = new List<double>();
                 for (int i = 0; i < _rows * _cols; i++)
                 {
-                    double prob = _currentProbabilities.TryGetValue(i, out var p) ? p : 0;
+                    double prob = CurrentProbabilities.TryGetValue(i, out var p) ? p : 0;
                     list.Add(prob);
                 }
 
@@ -1490,7 +1490,7 @@ namespace Clandom.Models.BalancedRandom
                     for (int c = 0; c < _cols; c++)
                     {
                         int number = r * _cols + c; // 0‑based 学号
-                        int count = _drawCounts.TryGetValue(number, out var val) ? val : 0;
+                        int count = DrawCounts.TryGetValue(number, out var val) ? val : 0;
                         dict.Add(new List<int> { r + 1, c + 1 }, count); // 键为 1‑based 行列
                     }
                 }
@@ -1509,7 +1509,7 @@ namespace Clandom.Models.BalancedRandom
                     for (int c = 0; c < _cols; c++)
                     {
                         int number = r * _cols + c;
-                        double prob = _currentProbabilities.TryGetValue(number, out var p) ? p : 0;
+                        double prob = CurrentProbabilities.TryGetValue(number, out var p) ? p : 0;
                         dict.Add(new List<int> { r + 1, c + 1 }, prob);
                     }
                 }
