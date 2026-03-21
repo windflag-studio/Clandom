@@ -186,26 +186,24 @@ namespace Clandom.Models.BalancedRandom
         /// </summary>
         /// <param name="range">学号范围，如 [1, 50]</param>
         /// <param name="filePath">数据文件路径</param>
-        /// <returns>权重列表，按学号顺序排列</returns>
-        public static List<double> GetWeightsByIdRange(List<int> range, string filePath = "balanced_rand_data.json")
+        /// <returns>权重字典，键为对应学号</returns>
+        public static Dictionary<int, double> GetWeightsByIdRangeDict(List<int> range,
+            string filePath = "balanced_rand_data.json")
         {
             if (range == null || range.Count != 2)
                 throw new ArgumentException("学号范围参数必须包含两个元素 [start, end]");
 
             var allData = LoadAllData(filePath);
-
-            // 查找匹配的学号范围数据
             foreach (var data in allData.Values)
             {
                 if (data.Type == "BalancedRand_Range" &&
                     data.NumberRangeStart == range[0] &&
                     data.NumberRangeEnd == range[1])
                 {
-                    return GetNumberRangeWeightList(data);
+                    return GetNumberRangeWeightDict(data);
                 }
             }
 
-            // 未找到匹配的数据
             throw new KeyNotFoundException($"未找到匹配的学号范围数据: [{range[0]}, {range[1]}]");
         }
 
@@ -225,7 +223,7 @@ namespace Clandom.Models.BalancedRandom
             foreach (var data in allData.Values)
             {
                 if (data.Type == "BalancedRandPlane" && data.Rows == range[0] && data.Cols == range[1])
-                    return GetPlaneConfigWeightList(data);
+                    return GetPlaneConfigWeightDict(data);
             }
 
             throw new KeyNotFoundException($"未找到匹配的Plane配置数据: [{range[0]}, {range[1]}]");
@@ -257,29 +255,6 @@ namespace Clandom.Models.BalancedRandom
             return weights;
         }
 
-        /// <summary>
-        /// 从2D配置数据中提取权重字典，键为[行,列] (1-based)
-        /// </summary>
-        private static Dictionary<(int row, int col), double> GetPlaneConfigWeightList(BalancedRandData data)
-        {
-            var weights = new Dictionary<(int, int), double>();
-            if (data.Type != "BalancedRandPlane")
-                throw new ArgumentException("数据类型必须是 BalancedRandPlane");
-
-            int totalPositions = data.Rows * data.Cols;
-            for (int i = 0; i < totalPositions; i++)
-            {
-                if (data.CurrentProbabilities.TryGetValue(i, out double prob))
-                {
-                    int row = i / data.Cols; // 0-based
-                    int col = i % data.Cols;
-                    weights.Add((row + 1, col + 1), prob); // 1-based 键
-                }
-            }
-
-            return weights;
-        }
-
 // 同理修改 GetPlaneConfigDrawCounts 返回 Dictionary<(int, int), int>
 
         /// <summary>
@@ -287,26 +262,24 @@ namespace Clandom.Models.BalancedRandom
         /// </summary>
         /// <param name="range">学号范围，如 [1, 50]</param>
         /// <param name="filePath">数据文件路径</param>
-        /// <returns>抽取次数列表，按学号顺序排列</returns>
-        public static List<int> GetDrawCountsByIdRange(List<int> range, string filePath = "balanced_rand_data.json")
+        /// <returns>抽取次数字典，键为对应学号</returns>
+        public static Dictionary<int, int> GetDrawCountsByIdRangeDict(List<int> range,
+            string filePath = "balanced_rand_data.json")
         {
             if (range == null || range.Count != 2)
                 throw new ArgumentException("学号范围参数必须包含两个元素 [start, end]");
 
             var allData = LoadAllData(filePath);
-
-            // 查找匹配的学号范围数据
             foreach (var data in allData.Values)
             {
                 if (data.Type == "BalancedRand_Range" &&
                     data.NumberRangeStart == range[0] &&
                     data.NumberRangeEnd == range[1])
                 {
-                    return GetNumberRangeDrawCounts(data);
+                    return GetNumberRangeDrawCountsDict(data);
                 }
             }
 
-            // 未找到匹配的数据
             throw new KeyNotFoundException($"未找到匹配的学号范围数据: [{range[0]}, {range[1]}]");
         }
 
@@ -326,59 +299,150 @@ namespace Clandom.Models.BalancedRandom
             foreach (var data in allData.Values)
             {
                 if (data.Type == "BalancedRandPlane" && data.Rows == range[0] && data.Cols == range[1])
-                    return GetPlaneConfigDrawCounts(data);
+                    return GetPlaneConfigDrawCountsDict(data);
             }
 
             throw new KeyNotFoundException($"未找到匹配的Plane配置数据: [{range[0]}, {range[1]}]");
         }
 
         /// <summary>
-        /// 从学号范围数据中提取抽取次数列表（按学号顺序）
+        /// 从学号范围数据中提取抽取次数字典，排除黑名单，添加白名单
         /// </summary>
-        private static List<int> GetNumberRangeDrawCounts(BalancedRandData data)
+        private static Dictionary<int, int> GetNumberRangeDrawCountsDict(BalancedRandData data)
         {
-            var drawCounts = new List<int>();
-
+            var dict = new Dictionary<int, int>();
             if (data.Type != "BalancedRand_Range")
-                throw new ArgumentException("数据类型必须是BalancedRand_Range");
+                throw new ArgumentException("数据类型必须是 BalancedRand_Range");
 
-            // 对于学号范围，按学号顺序提取抽取次数
-            for (int i = data.NumberRangeStart; i <= data.NumberRangeEnd; i++)
+            // 1. 原始范围内的学号（排除黑名单）
+            for (int number = data.NumberRangeStart; number <= data.NumberRangeEnd; number++)
             {
-                if (data.DrawCounts.ContainsKey(i))
-                {
-                    drawCounts.Add(data.DrawCounts[i]);
-                }
-                else
-                {
-                    drawCounts.Add(0); // 未找到的学号抽取次数设为0
-                }
+                if (data.Blacklist.Contains(number))
+                    continue;
+                int count = data.DrawCounts.TryGetValue(number, out var val) ? val : 0;
+                dict[number] = count;
             }
 
-            return drawCounts;
+            // 2. 添加白名单中的学号（排除黑名单，避免重复）
+            foreach (int number in data.Whitelist)
+            {
+                if (data.Blacklist.Contains(number))
+                    continue;
+                if (dict.ContainsKey(number))
+                    continue; // 已存在，保留原有值（可能非零）
+                int count = data.DrawCounts.TryGetValue(number, out var val) ? val : 0;
+                dict[number] = count;
+            }
+
+            return dict;
         }
 
         /// <summary>
-        /// 从2D配置数据中提取抽取次数字典，键为[行,列] (1-based)
+        /// 从学号范围数据中提取权重点典，排除黑名单，添加白名单
         /// </summary>
-        private static Dictionary<(int row, int col), int> GetPlaneConfigDrawCounts(BalancedRandData data)
+        private static Dictionary<int, double> GetNumberRangeWeightDict(BalancedRandData data)
         {
-            var drawCounts = new Dictionary<(int, int), int>();
+            var dict = new Dictionary<int, double>();
+            if (data.Type != "BalancedRand_Range")
+                throw new ArgumentException("数据类型必须是 BalancedRand_Range");
+
+            // 1. 原始范围内的学号（排除黑名单）
+            for (int number = data.NumberRangeStart; number <= data.NumberRangeEnd; number++)
+            {
+                if (data.Blacklist.Contains(number))
+                    continue;
+                double weight = data.CurrentProbabilities.TryGetValue(number, out var val) ? val : 0;
+                dict[number] = weight;
+            }
+
+            // 2. 添加白名单中的学号（排除黑名单，避免重复）
+            foreach (int number in data.Whitelist)
+            {
+                if (data.Blacklist.Contains(number))
+                    continue;
+                if (dict.ContainsKey(number))
+                    continue;
+                double weight = data.CurrentProbabilities.TryGetValue(number, out var val) ? val : 0;
+                dict[number] = weight;
+            }
+
+            return dict;
+        }
+
+        /// <summary>
+        /// 从2D配置数据中提取抽取次数字典，排除黑名单，添加白名单
+        /// </summary>
+        private static Dictionary<(int row, int col), int> GetPlaneConfigDrawCountsDict(BalancedRandData data)
+        {
+            var dict = new Dictionary<(int, int), int>();
             if (data.Type != "BalancedRandPlane")
                 throw new ArgumentException("数据类型必须是 BalancedRandPlane");
 
             int totalPositions = data.Rows * data.Cols;
+
+            // 1. 原始范围内的位置（0-based索引，排除黑名单）
             for (int i = 0; i < totalPositions; i++)
             {
-                if (data.DrawCounts.TryGetValue(i, out int count))
-                {
-                    int row = i / data.Cols; // 0-based
-                    int col = i % data.Cols;
-                    drawCounts.Add((row + 1, col + 1), count); // 转为 1-based
-                }
+                if (data.Blacklist.Contains(i))
+                    continue;
+                int row = i / data.Cols;
+                int col = i % data.Cols;
+                int count = data.DrawCounts.TryGetValue(i, out var val) ? val : 0;
+                dict[(row + 1, col + 1)] = count;
             }
 
-            return drawCounts;
+            // 2. 添加白名单中的位置（0-based索引，排除黑名单，避免重复）
+            foreach (int i in data.Whitelist)
+            {
+                if (data.Blacklist.Contains(i))
+                    continue;
+                int row = i / data.Cols;
+                int col = i % data.Cols;
+                if (dict.ContainsKey((row + 1, col + 1)))
+                    continue;
+                int count = data.DrawCounts.TryGetValue(i, out var val) ? val : 0;
+                dict[(row + 1, col + 1)] = count;
+            }
+
+            return dict;
+        }
+
+        /// <summary>
+        /// 从2D配置数据中提取权重点典，排除黑名单，添加白名单
+        /// </summary>
+        private static Dictionary<(int row, int col), double> GetPlaneConfigWeightDict(BalancedRandData data)
+        {
+            var dict = new Dictionary<(int, int), double>();
+            if (data.Type != "BalancedRandPlane")
+                throw new ArgumentException("数据类型必须是 BalancedRandPlane");
+
+            int totalPositions = data.Rows * data.Cols;
+
+            // 1. 原始范围内的位置（0-based索引，排除黑名单）
+            for (int i = 0; i < totalPositions; i++)
+            {
+                if (data.Blacklist.Contains(i))
+                    continue;
+                int row = i / data.Cols;
+                int col = i % data.Cols;
+                double weight = data.CurrentProbabilities.TryGetValue(i, out var val) ? val : 0;
+                dict[(row + 1, col + 1)] = weight;
+            }
+
+            // 2. 添加白名单中的位置（0-based索引，排除黑名单，避免重复）
+            foreach (int i in data.Whitelist)
+            {
+                if (data.Blacklist.Contains(i))
+                    continue;
+                int row = i / data.Cols;
+                int col = i % data.Cols;
+                if (dict.ContainsKey((row + 1, col + 1)))
+                    continue;
+                double weight = data.CurrentProbabilities.TryGetValue(i, out var val) ? val : 0;
+                dict[(row + 1, col + 1)] = weight;
+            }
+
+            return dict;
         }
     }
 
@@ -387,37 +451,39 @@ namespace Clandom.Models.BalancedRandom
     /// </summary>
     public class BalancedRand
     {
-        // 内部数据结构
-        internal Dictionary<int, int> DrawCounts; // 学号 -> 抽取次数
-        private Dictionary<int, int> _lastDrawRound; // 学号 -> 最后被抽中的轮次
         private List<int> _allNumbers; // 所有学号
-        private List<int>? _candidatePool; // 当前候选池
-        private Random _random;
-
-        // 配置参数
-        private int _currentRound; // 当前抽取轮次
-        private int _minPoolSize; // 最小候选池大小
-        private int _maxGapThreshold; // 最大差距阈值
-        private double _coldStartBoost; // 冷启动提升系数
-        private double _decayFactor; // 权重衰减因子
-
-        // 统计信息
-        private int _totalDraws;
-        internal Dictionary<int, double> CurrentProbabilities;
-
-        // 数据标识和类型
-        private string _dataId;
-        private string _type;
-
-        // 构造函数参数
-        private int _numberRangeStart;
-        private int _numberRangeEnd;
-        private List<int> _numbersList;
 
         // 黑名单/白名单功能
         private HashSet<int> _blacklist = new HashSet<int>();
+        private List<int>? _candidatePool; // 当前候选池
+        private double _coldStartBoost; // 冷启动提升系数
+
+        // 配置参数
+        private int _currentRound; // 当前抽取轮次
+
+        // 数据标识和类型
+        private string _dataId;
+        private double _decayFactor; // 权重衰减因子
+        private Dictionary<int, int> _lastDrawRound; // 学号 -> 最后被抽中的轮次
+        private int _maxGapThreshold; // 最大差距阈值
+        private int _minPoolSize; // 最小候选池大小
+        private int _numberRangeEnd;
+
+        // 构造函数参数
+        private int _numberRangeStart;
+        private List<int> _numbersList;
+        private Random _random;
+
+        // 统计信息
+        private int _totalDraws;
+        private string _type;
         private HashSet<int> _whitelist = new HashSet<int>();
         private bool _whitelistOnlyMode = false;
+
+        internal Dictionary<int, double> CurrentProbabilities;
+
+        // 内部数据结构
+        internal Dictionary<int, int> DrawCounts; // 学号 -> 抽取次数
 
         /// <summary>
         /// 构造函数
@@ -639,186 +705,6 @@ namespace Clandom.Models.BalancedRandom
                 Debug.WriteLine($"保存数据失败: {ex.Message}");
             }
         }
-
-        #region 黑名单/白名单功能
-
-        /// <summary>
-        /// 设置黑名单（禁止抽取的学号）
-        /// </summary>
-        /// <param name="numbers">要加入黑名单的学号</param>
-        public void SetBlacklist(IEnumerable<int> numbers)
-        {
-            _blacklist.Clear();
-            foreach (var number in numbers)
-            {
-                if (_allNumbers.Contains(number))
-                {
-                    _blacklist.Add(number);
-                }
-            }
-
-            ValidateBlacklist();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 添加学号到黑名单
-        /// </summary>
-        /// <param name="numbers">要添加到黑名单的学号</param>
-        public void AddToBlacklist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                if (_allNumbers.Contains(number) && !_blacklist.Contains(number))
-                {
-                    _blacklist.Add(number);
-                }
-            }
-
-            ValidateBlacklist();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 从黑名单中移除学号
-        /// </summary>
-        /// <param name="numbers">要从黑名单中移除的学号</param>
-        public void RemoveFromBlacklist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                _blacklist.Remove(number);
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 清除所有黑名单
-        /// </summary>
-        public void ClearBlacklist()
-        {
-            _blacklist.Clear();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 获取当前黑名单
-        /// </summary>
-        /// <returns>黑名单学号列表</returns>
-        public List<int> GetBlacklist()
-        {
-            return _blacklist.ToList();
-        }
-
-        /// <summary>
-        /// 检查学号是否在黑名单中
-        /// </summary>
-        public bool IsInBlacklist(int number)
-        {
-            return _blacklist.Contains(number);
-        }
-
-        /// <summary>
-        /// 设置白名单（额外可抽取的学号，可以超出原始范围）
-        /// </summary>
-        /// <param name="numbers">要加入白名单的学号</param>
-        public void SetWhitelist(IEnumerable<int> numbers)
-        {
-            _whitelist.Clear();
-            foreach (var number in numbers)
-            {
-                _whitelist.Add(number);
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 添加学号到白名单
-        /// </summary>
-        /// <param name="numbers">要添加到白名单的学号</param>
-        public void AddToWhitelist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                if (!_whitelist.Contains(number))
-                {
-                    _whitelist.Add(number);
-                }
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 从白名单中移除学号
-        /// </summary>
-        /// <param name="numbers">要从白名单中移除的学号</param>
-        public void RemoveFromWhitelist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                _whitelist.Remove(number);
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 清除所有白名单
-        /// </summary>
-        public void ClearWhitelist()
-        {
-            _whitelist.Clear();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 获取当前白名单
-        /// </summary>
-        /// <returns>白名单学号列表</returns>
-        public List<int> GetWhitelist()
-        {
-            return _whitelist.ToList();
-        }
-
-        /// <summary>
-        /// 检查学号是否在白名单中
-        /// </summary>
-        public bool IsInWhitelist(int number)
-        {
-            return _whitelist.Contains(number);
-        }
-
-        /// <summary>
-        /// 设置白名单模式
-        /// </summary>
-        /// <param name="whitelistOnly">true: 只从白名单中抽取; false: 正常模式，白名单作为额外候选</param>
-        public void SetWhitelistOnlyMode(bool whitelistOnly)
-        {
-            _whitelistOnlyMode = whitelistOnly;
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 获取当前是否处于白名单模式
-        /// </summary>
-        public bool GetWhitelistOnlyMode()
-        {
-            return _whitelistOnlyMode;
-        }
-
-        /// <summary>
-        /// 验证黑名单的合法性
-        /// </summary>
-        private void ValidateBlacklist()
-        {
-            // 移除不在_allNumbers中的黑名单项
-            _blacklist.RemoveWhere(number => !_allNumbers.Contains(number));
-        }
-
-        #endregion
 
         /// <summary>
         /// 获取数据ID
@@ -1072,6 +958,186 @@ namespace Clandom.Models.BalancedRandom
             UpdateCandidatePool();
         }
 
+        #region 黑名单/白名单功能
+
+        /// <summary>
+        /// 设置黑名单（禁止抽取的学号）
+        /// </summary>
+        /// <param name="numbers">要加入黑名单的学号</param>
+        public void SetBlacklist(IEnumerable<int> numbers)
+        {
+            _blacklist.Clear();
+            foreach (var number in numbers)
+            {
+                if (_allNumbers.Contains(number))
+                {
+                    _blacklist.Add(number);
+                }
+            }
+
+            ValidateBlacklist();
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 添加学号到黑名单
+        /// </summary>
+        /// <param name="numbers">要添加到黑名单的学号</param>
+        public void AddToBlacklist(params int[] numbers)
+        {
+            foreach (var number in numbers)
+            {
+                if (_allNumbers.Contains(number) && !_blacklist.Contains(number))
+                {
+                    _blacklist.Add(number);
+                }
+            }
+
+            ValidateBlacklist();
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 从黑名单中移除学号
+        /// </summary>
+        /// <param name="numbers">要从黑名单中移除的学号</param>
+        public void RemoveFromBlacklist(params int[] numbers)
+        {
+            foreach (var number in numbers)
+            {
+                _blacklist.Remove(number);
+            }
+
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 清除所有黑名单
+        /// </summary>
+        public void ClearBlacklist()
+        {
+            _blacklist.Clear();
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 获取当前黑名单
+        /// </summary>
+        /// <returns>黑名单学号列表</returns>
+        public List<int> GetBlacklist()
+        {
+            return _blacklist.ToList();
+        }
+
+        /// <summary>
+        /// 检查学号是否在黑名单中
+        /// </summary>
+        public bool IsInBlacklist(int number)
+        {
+            return _blacklist.Contains(number);
+        }
+
+        /// <summary>
+        /// 设置白名单（额外可抽取的学号，可以超出原始范围）
+        /// </summary>
+        /// <param name="numbers">要加入白名单的学号</param>
+        public void SetWhitelist(IEnumerable<int> numbers)
+        {
+            _whitelist.Clear();
+            foreach (var number in numbers)
+            {
+                _whitelist.Add(number);
+            }
+
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 添加学号到白名单
+        /// </summary>
+        /// <param name="numbers">要添加到白名单的学号</param>
+        public void AddToWhitelist(params int[] numbers)
+        {
+            foreach (var number in numbers)
+            {
+                if (!_whitelist.Contains(number))
+                {
+                    _whitelist.Add(number);
+                }
+            }
+
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 从白名单中移除学号
+        /// </summary>
+        /// <param name="numbers">要从白名单中移除的学号</param>
+        public void RemoveFromWhitelist(params int[] numbers)
+        {
+            foreach (var number in numbers)
+            {
+                _whitelist.Remove(number);
+            }
+
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 清除所有白名单
+        /// </summary>
+        public void ClearWhitelist()
+        {
+            _whitelist.Clear();
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 获取当前白名单
+        /// </summary>
+        /// <returns>白名单学号列表</returns>
+        public List<int> GetWhitelist()
+        {
+            return _whitelist.ToList();
+        }
+
+        /// <summary>
+        /// 检查学号是否在白名单中
+        /// </summary>
+        public bool IsInWhitelist(int number)
+        {
+            return _whitelist.Contains(number);
+        }
+
+        /// <summary>
+        /// 设置白名单模式
+        /// </summary>
+        /// <param name="whitelistOnly">true: 只从白名单中抽取; false: 正常模式，白名单作为额外候选</param>
+        public void SetWhitelistOnlyMode(bool whitelistOnly)
+        {
+            _whitelistOnlyMode = whitelistOnly;
+            UpdateCandidatePool();
+        }
+
+        /// <summary>
+        /// 获取当前是否处于白名单模式
+        /// </summary>
+        public bool GetWhitelistOnlyMode()
+        {
+            return _whitelistOnlyMode;
+        }
+
+        /// <summary>
+        /// 验证黑名单的合法性
+        /// </summary>
+        private void ValidateBlacklist()
+        {
+            // 移除不在_allNumbers中的黑名单项
+            _blacklist.RemoveWhere(number => !_allNumbers.Contains(number));
+        }
+
+        #endregion
+
         #region 私有方法
 
         /// <summary>
@@ -1284,9 +1350,9 @@ namespace Clandom.Models.BalancedRandom
     /// </summary>
     public class BalancedRandPlane : BalancedRand
     {
-        private int _rows;
         private int _cols;
         private string _dataIdPlane;
+        private int _rows;
 
         /// <summary>
         /// 构造函数

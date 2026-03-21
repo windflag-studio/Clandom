@@ -24,7 +24,7 @@ public partial class ResultWindow : Window
 
     private void Control_OnLoaded(object? sender, RoutedEventArgs e)
     {
-        var settings = (DataContext as FloatingWindowViewModel).Settings;
+        var settings = (DataContext as ResultWindowViewModel).Settings;
         if (settings.MinId >= settings.MaxId)
         {
             return;

@@ -7,88 +7,146 @@
              mc:Ignorable="d" d:DesignWidth="637" d:DesignHeight="450"
              x:Class="Clandom.Views.Pages.StatisticsPage" x:DataType="vmp:StatisticsPageViewModel"
              Loaded="Control_OnLoaded">
-    
+
     <UserControl.Styles>
-        <Style Selector="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center"/>
+        <Style Selector="ComboBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
         </Style>
         <Style Selector="lvc|CartesianChart">
-            <Setter Property="ZoomMode" Value="X"/>
+            <Setter Property="ZoomMode" Value="X" />
         </Style>
     </UserControl.Styles>
-    
+
     <UserControl.DataContext>
-        <vmp:StatisticsPageViewModel/>
+        <vmp:StatisticsPageViewModel />
     </UserControl.DataContext>
-    
+
     <Grid RowDefinitions="Auto *" Margin="8" RowSpacing="4">
-        <TextBlock Grid.Row="0" Text="统计" FontSize="30" HorizontalAlignment="Left"/>
-        <Grid Grid.Row="1"
-              ColumnDefinitions="* *" RowDefinitions="Auto * *" 
-              ColumnSpacing="4" RowSpacing="4">
-            
+        <TextBlock Grid.Row="0" Text="统计" FontSize="30" HorizontalAlignment="Left" />
+        <Grid Grid.Row="1" RowDefinitions="Auto *">
             <Grid.Resources>
-                <lvc:SharedAxesPair x:Key="IdSharedAxes">
-
-                    <lvc:SharedAxesPair.First>
-                        <lvc:XamlAxis
-                            MaxLimit="{Binding IdMax}"/>
-                    </lvc:SharedAxesPair.First>
-
-                    <lvc:SharedAxesPair.Second>
-                        <lvc:XamlAxis
-                            MaxLimit="{Binding IdMax}" />
-                    </lvc:SharedAxesPair.Second>
-
-                </lvc:SharedAxesPair>
-                
-                <lvc:SharedAxesPair x:Key="PlaneSharedAxes">
-
-                    <lvc:SharedAxesPair.First>
-                        <lvc:XamlAxis
-                            MaxLimit="{Binding PlaneMax}"/>
-                    </lvc:SharedAxesPair.First>
-
-                    <lvc:SharedAxesPair.Second>
-                        <lvc:XamlAxis
-                                      MaxLimit="{Binding PlaneMax}" />
-                    </lvc:SharedAxesPair.Second>
-
-                </lvc:SharedAxesPair>
+                <x:String x:Key="blue">#1976D2</x:String>
+                <x:String x:Key="yellow">#C6A700</x:String>
             </Grid.Resources>
-            
-            <Grid Grid.Column="0" Grid.Row="0" ColumnDefinitions="Auto *">
-                <TextBlock Grid.Column="0" Text="学号统计" FontSize="15"/>
-                <ComboBox Grid.Column="1" x:Name="IdStatisticsComboBox" HorizontalAlignment="Right" SelectionChanged="IdStatisticsComboBox_OnSelectionChanged"/>
+            <Grid Grid.Row="0" ColumnDefinitions="* Auto">
+                <TabStrip Grid.Column="0" x:Name="Strip">
+                    <TabStripItem Content="学号" />
+                    <TabStripItem Content="行列" />
+                </TabStrip>
+                <ComboBox Grid.Column="1" x:Name="IdStatisticsComboBox" HorizontalAlignment="Right"
+                          IsVisible="{Binding !#Strip.SelectedIndex}"
+                          SelectionChanged="IdStatisticsComboBox_OnSelectionChanged" />
+                <ComboBox Grid.Column="1" x:Name="PlaneStatisticsComboBox" HorizontalAlignment="Right"
+                          IsVisible="{Binding #Strip.SelectedIndex}"
+                          SelectionChanged="TDStatisticsComboBox_OnSelectionChanged" />
             </Grid>
-            
+
             <!-- 学号图表 -->
-            <lvc:CartesianChart
-                Grid.Column="0" Grid.Row="1" DrawMargin="70,Auto,Auto,Auto"
-                XAxes="{lvc:FromSharedAxes AxesPair={StaticResource IdSharedAxes}, Element=First}"
-                ZoomMode="X" Series="{Binding IdWeightSeries}"/>
+            <lvc:CartesianChart Grid.Row="1" XAxes="{Binding IdLabelAxes}"
+                                IsVisible="{Binding !#Strip.SelectedIndex}"
+                                LegendTextSize="16"
+                                LegendPosition="Bottom">
+                <lvc:CartesianChart.Resources>
+                    <ControlTheme x:Key="{x:Type lvc:XamlLineSeries}" TargetType="lvc:XamlLineSeries">
+                        <Setter Property="GeometrySize" Value="10" />
+                        <Setter Property="Fill" Value="{x:Null}" />
+                        <Setter Property="LineSmoothness" Value="0" />
+                    </ControlTheme>
+                    <ControlTheme x:Key="{x:Type lvc:XamlAxis}" TargetType="lvc:XamlAxis">
+                        <Setter Property="NameTextSize" Value="14" />
+                        <Setter Property="NamePadding" Value="{lvc:Padding '0,20'}" />
+                        <Setter Property="TextSize" Value="12" />
+                        <Setter Property="DrawTicksPath" Value="True" />
+                    </ControlTheme>
+                </lvc:CartesianChart.Resources>
 
-            <lvc:CartesianChart
-                Grid.Column="0" Grid.Row="2" Margin="0,-4,0,0" DrawMargin="70,Auto,Auto,Auto"
-                XAxes="{lvc:FromSharedAxes AxesPair={StaticResource IdSharedAxes}, Element=Second}"
-                ZoomMode="X" Series="{Binding IdCountsSeries}"/>
-            
-            <Grid Grid.Column="1" Grid.Row="0" ColumnDefinitions="Auto *">
-                <TextBlock Grid.Column="0" Text="行列统计" FontSize="15"/>
-                <ComboBox Grid.Column="1" x:Name="PlaneStatisticsComboBox" HorizontalAlignment="Right" SelectionChanged="TDStatisticsComboBox_OnSelectionChanged"/>
-            </Grid>
+                <lvc:CartesianChart.Series>
+                    <lvc:XamlColumnSeries
+                        SeriesName="次数"
+                        Values="{Binding IdCountsData}"
+                        Stroke="{lvc:SolidColorPaint Color={StaticResource blue}, StrokeWidth=2}"
+                        ScalesYAt="0" />
+                    <lvc:XamlLineSeries
+                        SeriesName="权重"
+                        Values="{Binding IdWeightData}"
+                        Stroke="{lvc:SolidColorPaint Color={StaticResource yellow}, StrokeWidth=2}"
+                        GeometryStroke="{lvc:SolidColorPaint Color={StaticResource yellow}, StrokeWidth=2}"
+                        ScalesYAt="1" />
+                </lvc:CartesianChart.Series>
+
+                <lvc:CartesianChart.YAxes>
+                    <lvc:XamlAxis
+                        AxisName="次数" MinLimit="0" MinStep="1"
+                        Padding="{lvc:Padding '0, 20, 0, 0'}"
+                        NamePaint="{lvc:SolidColorPaint Color={StaticResource blue}}"
+                        LabelsPaint="{lvc:SolidColorPaint Color={StaticResource blue}}"
+                        TicksPaint="{lvc:SolidColorPaint Color={StaticResource blue}}"
+                        SubticksPaint="{lvc:SolidColorPaint Color={StaticResource blue}}" />
+                    <lvc:XamlAxis
+                        AxisName="权重" MinLimit="0"
+                        Padding="{lvc:Padding '20, 0, 0, 0'}"
+                        Position="End"
+                        ShowSeparatorLines="False"
+                        NamePaint="{lvc:SolidColorPaint Color={StaticResource yellow}}"
+                        LabelsPaint="{lvc:SolidColorPaint Color={StaticResource yellow}}"
+                        TicksPaint="{lvc:SolidColorPaint Color={StaticResource yellow}}"
+                        SubticksPaint="{lvc:SolidColorPaint Color={StaticResource yellow}}" />
+                </lvc:CartesianChart.YAxes>
+            </lvc:CartesianChart>
+
             <!-- 座位图表 -->
-            
-            <lvc:CartesianChart
-                Grid.Column="1" Grid.Row="1" DrawMargin="70,Auto,Auto,Auto"
-                XAxes="{lvc:FromSharedAxes AxesPair={StaticResource PlaneSharedAxes}, Element=First}"
-                ZoomMode="X" Series="{Binding PlaneWeightSeries}"/>
+            <lvc:CartesianChart Grid.Row="1" XAxes="{Binding PlaneLabelAxes}"
+                                IsVisible="{Binding #Strip.SelectedIndex}"
+                                LegendTextSize="16"
+                                LegendPosition="Bottom">
+                <lvc:CartesianChart.Resources>
+                    <ControlTheme x:Key="{x:Type lvc:XamlLineSeries}" TargetType="lvc:XamlLineSeries">
+                        <Setter Property="GeometrySize" Value="10" />
+                        <Setter Property="Fill" Value="{x:Null}" />
+                        <Setter Property="LineSmoothness" Value="0" />
+                    </ControlTheme>
+                    <ControlTheme x:Key="{x:Type lvc:XamlAxis}" TargetType="lvc:XamlAxis">
+                        <Setter Property="NameTextSize" Value="14" />
+                        <Setter Property="NamePadding" Value="{lvc:Padding '0,20'}" />
+                        <Setter Property="TextSize" Value="12" />
+                        <Setter Property="DrawTicksPath" Value="True" />
+                    </ControlTheme>
+                </lvc:CartesianChart.Resources>
 
-            <lvc:CartesianChart
-                Grid.Column="1" Grid.Row="2" Margin="0,-4,0,0" DrawMargin="70,Auto,Auto,Auto"
-                XAxes="{lvc:FromSharedAxes AxesPair={StaticResource PlaneSharedAxes}, Element=Second}"
-                ZoomMode="X" Series="{Binding PlaneCountsSeries}"/>
-            
+                <lvc:CartesianChart.Series>
+                    <lvc:XamlColumnSeries
+                        SeriesName="次数"
+                        Values="{Binding PlaneCountsData}"
+                        Stroke="{lvc:SolidColorPaint Color={StaticResource blue}, StrokeWidth=2}"
+                        ScalesYAt="0" />
+                    <lvc:XamlLineSeries
+                        SeriesName="权重"
+                        Values="{Binding PlaneWeightData}"
+                        Stroke="{lvc:SolidColorPaint Color={StaticResource yellow}, StrokeWidth=2}"
+                        GeometryStroke="{lvc:SolidColorPaint Color={StaticResource yellow}, StrokeWidth=2}"
+                        ScalesYAt="1" />
+                </lvc:CartesianChart.Series>
+
+                <lvc:CartesianChart.YAxes>
+                    <lvc:XamlAxis
+                        AxisName="次数" MinLimit="0" MinStep="1"
+                        Padding="{lvc:Padding '0, 20, 0, 0'}"
+                        NamePaint="{lvc:SolidColorPaint Color={StaticResource blue}}"
+                        LabelsPaint="{lvc:SolidColorPaint Color={StaticResource blue}}"
+                        TicksPaint="{lvc:SolidColorPaint Color={StaticResource blue}}"
+                        SubticksPaint="{lvc:SolidColorPaint Color={StaticResource blue}}" />
+                    <lvc:XamlAxis
+                        AxisName="权重" MinLimit="0"
+                        Padding="{lvc:Padding '20, 0, 0, 0'}"
+                        Position="End"
+                        ShowSeparatorLines="False"
+                        NamePaint="{lvc:SolidColorPaint Color={StaticResource yellow}}"
+                        LabelsPaint="{lvc:SolidColorPaint Color={StaticResource yellow}}"
+                        TicksPaint="{lvc:SolidColorPaint Color={StaticResource yellow}}"
+                        SubticksPaint="{lvc:SolidColorPaint Color={StaticResource yellow}}" />
+                </lvc:CartesianChart.YAxes>
+            </lvc:CartesianChart>
         </Grid>
     </Grid>
 </UserControl>

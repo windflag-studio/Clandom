@@ -2,15 +2,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Clandom.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Clandom.Views.ResultWindow" x:DataType="vm:ResultWindowViewModel"
         Width="400" Height="300" Deactivated="WindowBase_OnDeactivated"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource SystemControlBackgroundBaseLowBrush}"
+        Background="{StaticResource SystemControlBackgroundBaseMediumBrush}"
         Loaded="Control_OnLoaded"
         SizeToContent="WidthAndHeight"
         SystemDecorations="None" Topmost="True"
-        x:Class="Clandom.Views.ResultWindow"
         Title="ResultWindow">
+    <Window.DataContext>
+        <vm:ResultWindowViewModel />
+    </Window.DataContext>
     <TextBlock Text="1" x:Name="Result" Margin="20"
                FontSize="150" TextWrapping="NoWrap"
                HorizontalAlignment="Center"

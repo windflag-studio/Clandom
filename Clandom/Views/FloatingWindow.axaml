@@ -18,13 +18,13 @@
         <!-- 自定义标题栏，用于拖动 -->
         <Border DockPanel.Dock="Top"
                 Height="30"
-                Background="#2D2D2D"
+                Background="{StaticResource SystemControlBackgroundBaseMediumBrush}"
                 CornerRadius="5,5,0,0"
                 PointerPressed="TitleBar_OnPointerPressed">
             <TextBlock Text="Clandom"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"
-                       Foreground="White"/>
+                       Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}" />
         </Border>
 
         <!-- 窗口内容区 -->
@@ -39,8 +39,8 @@
                         <StackPanel Orientation="Horizontal">
                             <Button Click="CloseButton_OnClick" Theme="{StaticResource TransparentButton}">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:SymbolIcon Symbol="Dismiss" FontSize="18"/>
-                                    <TextBlock Text="退出"/>
+                                    <ui:SymbolIcon Symbol="Dismiss" FontSize="18" />
+                                    <TextBlock Text="退出" />
                                 </StackPanel>
                             </Button>
                         </StackPanel>
