@@ -14,13 +14,16 @@
         ShowInTaskbar="False"
         Topmost="True"
         Title="Float">
+    <Window.DataContext>
+        <vm:FloatingWindowViewModel />
+    </Window.DataContext>
     <DockPanel>
         <!-- 自定义标题栏，用于拖动 -->
         <Border DockPanel.Dock="Top"
-                Height="30"
+                Height=""
                 Background="{StaticResource SystemControlBackgroundBaseMediumBrush}"
                 CornerRadius="5,5,0,0"
-                PointerPressed="TitleBar_OnPointerPressed">
+                PointerPressed="Move_Window">
             <TextBlock Text="Clandom"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Center"
@@ -28,7 +31,7 @@
         </Border>
 
         <!-- 窗口内容区 -->
-        <StackPanel Orientation="Horizontal" Margin="4" Spacing="2">
+        <StackPanel Orientation="Horizontal" Margin="4,0,4,4" Spacing="2">
             <Button Classes="accent" Click="RunButton_OnClick">
                 <ui:SymbolIcon Symbol="People" FontSize="18" />
             </Button>
@@ -36,8 +39,51 @@
                 <ui:SymbolIcon Symbol="Setting" FontSize="18" />
                 <Button.Flyout>
                     <Flyout>
-                        <StackPanel Orientation="Horizontal">
-                            <Button Click="CloseButton_OnClick" Theme="{StaticResource TransparentButton}">
+                        <StackPanel Orientation="Vertical" Spacing="4">
+                            <StackPanel.Styles>
+                                <Style Selector="StackPanel">
+                                    <Setter Property="Spacing" Value="4" />
+                                    <Setter Property="Orientation" Value="Horizontal" />
+                                </Style>
+                                <Style Selector="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="HorizontalAlignment" Value="Center" />
+                                </Style>
+                                <Style Selector="NumericUpDown">
+                                    <Setter Property="Increment" Value="1" />
+                                    <Setter Property="Width" Value="150" />
+                                </Style>
+                            </StackPanel.Styles>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="当前模式：" />
+                                <TabStrip x:Name="Mode" SelectedIndex="{Binding Settings.SelectedMode, Mode=TwoWay}"
+                                          HorizontalAlignment="Center" Theme="{StaticResource TabStripStyle}">
+                                    <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽学号" />
+                                    <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽行列" />
+                                </TabStrip>
+                            </StackPanel>
+                            <!-- 学号设置 -->
+                            <StackPanel Orientation="Horizontal" IsVisible="{Binding !#Mode.SelectedIndex}">
+                                <TextBlock Text="从" />
+                                <NumericUpDown Minimum="1" Maximum="10000"
+                                               Value="{Binding Settings.MinId, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" IsVisible="{Binding !#Mode.SelectedIndex}">
+                                <TextBlock Text="到" />
+                                <NumericUpDown Minimum="2" Maximum="10001"
+                                               Value="{Binding Settings.MaxId, Mode=TwoWay}" />
+                            </StackPanel>
+                            <!-- 行列设置 -->
+                            <StackPanel Orientation="Horizontal" IsVisible="{Binding #Mode.SelectedIndex}">
+                                <TextBlock Text="行：" />
+                                <NumericUpDown Minimum="1" Maximum="100" Value="{Binding Settings.Row, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" IsVisible="{Binding #Mode.SelectedIndex}">
+                                <TextBlock Text="列：" />
+                                <NumericUpDown Minimum="2" Maximum="100" Value="{Binding Settings.Col, Mode=TwoWay}" />
+                            </StackPanel>
+                            <Separator />
+                            <Button Click="CloseButton_OnClick" Classes="accent" HorizontalAlignment="Stretch">
                                 <StackPanel Orientation="Horizontal">
                                     <ui:SymbolIcon Symbol="Dismiss" FontSize="18" />
                                     <TextBlock Text="退出" />
