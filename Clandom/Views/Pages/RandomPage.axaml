@@ -33,16 +33,16 @@
             <StackPanel IsVisible="{Binding !#Mode.SelectedIndex}">
                 <TextBlock Text="范围：" />
                 <NumericUpDown x:Name="RMinId" Minimum="1" Maximum="10000"
-                               Value="{Binding Settings.MinId, Mode=TwoWay}" />
+                               Value="{Binding Settings.MinId}" />
                 <TextBlock Text="~" />
                 <NumericUpDown x:Name="RMaxId" Minimum="2" Maximum="10001"
-                               Value="{Binding Settings.MaxId, Mode=TwoWay}" />
+                               Value="{Binding Settings.MaxId}" />
             </StackPanel>
             <StackPanel IsVisible="{Binding #Mode.SelectedIndex}">
                 <TextBlock Text="行：" />
-                <NumericUpDown x:Name="RRow" Minimum="1" Maximum="100" Value="{Binding Settings.Row, Mode=TwoWay}" />
+                <NumericUpDown x:Name="RRow" Minimum="1" Maximum="100" Value="{Binding Settings.Row}" />
                 <TextBlock Text="列：" />
-                <NumericUpDown x:Name="RCol" Minimum="2" Maximum="100" Value="{Binding Settings.Col, Mode=TwoWay}" />
+                <NumericUpDown x:Name="RCol" Minimum="2" Maximum="100" Value="{Binding Settings.Col}" />
             </StackPanel>
             <Button x:Name="Run" Classes="accent" Content="抽" Click="Run_OnClick" />
         </StackPanel>

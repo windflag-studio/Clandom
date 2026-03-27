@@ -4,8 +4,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Clandom.ViewModels"
         xmlns:ui="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+        xmlns:controls="clr-namespace:Clandom.Controls"
         mc:Ignorable="d"
         x:Class="Clandom.Views.FloatingWindow" x:DataType="vm:FloatingWindowViewModel"
+        PointerPressed="OnPointerPressed"
+        PointerMoved="OnPointerMoved"
+        PointerReleased="OnPointerReleased"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1"
@@ -17,82 +21,68 @@
     <Window.DataContext>
         <vm:FloatingWindowViewModel />
     </Window.DataContext>
-    <DockPanel>
-        <!-- 自定义标题栏，用于拖动 -->
-        <Border DockPanel.Dock="Top"
-                Height=""
-                Background="{StaticResource SystemControlBackgroundBaseMediumBrush}"
-                CornerRadius="5,5,0,0"
-                PointerPressed="Move_Window">
-            <TextBlock Text="Clandom"
-                       VerticalAlignment="Center"
-                       HorizontalAlignment="Center"
-                       Foreground="{StaticResource SystemControlForegroundBaseMediumBrush}" />
-        </Border>
-
-        <!-- 窗口内容区 -->
-        <StackPanel Orientation="Horizontal" Margin="4,0,4,4" Spacing="2">
-            <Button Classes="accent" Click="RunButton_OnClick">
-                <ui:SymbolIcon Symbol="People" FontSize="18" />
-            </Button>
-            <Button>
-                <ui:SymbolIcon Symbol="Setting" FontSize="18" />
-                <Button.Flyout>
-                    <Flyout>
-                        <StackPanel Orientation="Vertical" Spacing="4">
-                            <StackPanel.Styles>
-                                <Style Selector="StackPanel">
-                                    <Setter Property="Spacing" Value="4" />
-                                    <Setter Property="Orientation" Value="Horizontal" />
-                                </Style>
-                                <Style Selector="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center" />
-                                    <Setter Property="HorizontalAlignment" Value="Center" />
-                                </Style>
-                                <Style Selector="NumericUpDown">
-                                    <Setter Property="Increment" Value="1" />
-                                    <Setter Property="Width" Value="150" />
-                                </Style>
-                            </StackPanel.Styles>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="当前模式：" />
-                                <TabStrip x:Name="Mode" SelectedIndex="{Binding Settings.SelectedMode, Mode=TwoWay}"
-                                          HorizontalAlignment="Center" Theme="{StaticResource TabStripStyle}">
-                                    <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽学号" />
-                                    <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽行列" />
-                                </TabStrip>
-                            </StackPanel>
-                            <!-- 学号设置 -->
-                            <StackPanel Orientation="Horizontal" IsVisible="{Binding !#Mode.SelectedIndex}">
-                                <TextBlock Text="从" />
-                                <NumericUpDown Minimum="1" Maximum="10000"
-                                               Value="{Binding Settings.MinId, Mode=TwoWay}" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" IsVisible="{Binding !#Mode.SelectedIndex}">
-                                <TextBlock Text="到" />
-                                <NumericUpDown Minimum="2" Maximum="10001"
-                                               Value="{Binding Settings.MaxId, Mode=TwoWay}" />
-                            </StackPanel>
-                            <!-- 行列设置 -->
-                            <StackPanel Orientation="Horizontal" IsVisible="{Binding #Mode.SelectedIndex}">
-                                <TextBlock Text="行：" />
-                                <NumericUpDown Minimum="1" Maximum="100" Value="{Binding Settings.Row, Mode=TwoWay}" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" IsVisible="{Binding #Mode.SelectedIndex}">
-                                <TextBlock Text="列：" />
-                                <NumericUpDown Minimum="2" Maximum="100" Value="{Binding Settings.Col, Mode=TwoWay}" />
-                            </StackPanel>
-                            <Separator />
-                            <Button Click="CloseButton_OnClick" Classes="accent" HorizontalAlignment="Stretch">
-                                <StackPanel Orientation="Horizontal">
-                                    <ui:SymbolIcon Symbol="Dismiss" FontSize="18" />
-                                    <TextBlock Text="退出" />
-                                </StackPanel>
-                            </Button>
+    <StackPanel Orientation="Horizontal" Margin="4,4,4,4" Spacing="2">
+        <controls:FluentIcon Glyph="&#xee46;" FontSize="20" Margin="0,0,-2,0" />
+        <Button Classes="accent" Click="RunButton_OnClick">
+            <ui:SymbolIcon Symbol="People" FontSize="18" />
+        </Button>
+        <Button>
+            <ui:SymbolIcon Symbol="Setting" FontSize="18" />
+            <Button.Flyout>
+                <Flyout>
+                    <StackPanel Orientation="Vertical" Spacing="4">
+                        <StackPanel.Styles>
+                            <Style Selector="StackPanel">
+                                <Setter Property="Spacing" Value="4" />
+                                <Setter Property="Orientation" Value="Horizontal" />
+                            </Style>
+                            <Style Selector="TextBlock">
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                                <Setter Property="HorizontalAlignment" Value="Center" />
+                            </Style>
+                            <Style Selector="NumericUpDown">
+                                <Setter Property="Increment" Value="1" />
+                                <Setter Property="Width" Value="150" />
+                            </Style>
+                        </StackPanel.Styles>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="当前模式：" />
+                            <TabStrip x:Name="Mode" SelectedIndex="{Binding Settings.SelectedMode, Mode=TwoWay}"
+                                      HorizontalAlignment="Center" Theme="{StaticResource TabStripStyle}">
+                                <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽学号" />
+                                <TabStripItem Theme="{StaticResource TabItemStyle}" Content="抽行列" />
+                            </TabStrip>
                         </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-        </StackPanel>
-    </DockPanel>
+                        <!-- 学号设置 -->
+                        <StackPanel Orientation="Horizontal" IsVisible="{Binding !#Mode.SelectedIndex}">
+                            <TextBlock Text="从" />
+                            <NumericUpDown Minimum="1" Maximum="10000"
+                                           Value="{Binding Settings.MinId, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" IsVisible="{Binding !#Mode.SelectedIndex}">
+                            <TextBlock Text="到" />
+                            <NumericUpDown Minimum="2" Maximum="10001"
+                                           Value="{Binding Settings.MaxId, Mode=TwoWay}" />
+                        </StackPanel>
+                        <!-- 行列设置 -->
+                        <StackPanel Orientation="Horizontal" IsVisible="{Binding #Mode.SelectedIndex}">
+                            <TextBlock Text="行：" />
+                            <NumericUpDown Minimum="1" Maximum="100" Value="{Binding Settings.Row, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" IsVisible="{Binding #Mode.SelectedIndex}">
+                            <TextBlock Text="列：" />
+                            <NumericUpDown Minimum="2" Maximum="100" Value="{Binding Settings.Col, Mode=TwoWay}" />
+                        </StackPanel>
+                        <Separator />
+                        <Button Click="CloseButton_OnClick" Classes="accent" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Dismiss" FontSize="18" />
+                                <TextBlock Text="退出" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+    </StackPanel>
 </Window>

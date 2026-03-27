@@ -13,14 +13,14 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="Clandom">
     <Window.Resources>
-        <ui:SymbolIconSource x:Key="FRandom" Symbol="Sync"/>
-        <ui:SymbolIconSource x:Key="FStatistics" Symbol="ContactInfo"/>
+        <ui:SymbolIconSource x:Key="FRandom" Symbol="Sync" />
+        <ui:SymbolIconSource x:Key="FStatistics" Symbol="ContactInfo" />
     </Window.Resources>
     <ui:NavigationView x:Name="NavigationView" SelectionChanged="NavigationView_OnSelectionChanged">
         <ui:NavigationView.MenuItems>
-            <ui:NavigationViewItem x:Name="HomePage" IconSource="{StaticResource FRandom}" Content="随机" Tag="RandomPage"/>
-            <ui:NavigationViewItem IconSource="{StaticResource FStatistics}" Content="统计" Tag="StatisticsPage"/>
+            <ui:NavigationViewItem x:Name="HomePage" IconSource="{StaticResource FRandom}" Content="随机"
+                                   Tag="RandomPage" />
+            <ui:NavigationViewItem IconSource="{StaticResource FStatistics}" Content="统计" Tag="StatisticsPage" />
         </ui:NavigationView.MenuItems>
     </ui:NavigationView>
-
 </Window>

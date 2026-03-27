@@ -54,9 +54,6 @@ public class App : Application
 
     private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
     {
-        if (Settings != null)
-        {
-            SettingsManager.Save(Settings);
-        }
+        SettingsManager.Save(Settings);
     }
 }

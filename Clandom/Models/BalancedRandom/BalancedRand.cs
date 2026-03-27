@@ -585,6 +585,14 @@ namespace Clandom.Models.BalancedRandom
             }
         }
 
+        // 在 BalancedRand 类中添加
+        protected Dictionary<int, int> GetDrawCounts() => DrawCounts;
+        protected Dictionary<int, int> GetLastDrawRound() => _lastDrawRound;
+        protected Dictionary<int, double> GetCurrentProbabilities() => CurrentProbabilities;
+        protected HashSet<int> GetBlacklist() => _blacklist;
+        protected HashSet<int> GetWhitelist() => _whitelist;
+        protected bool GetWhitelistOnlyMode() => _whitelistOnlyMode;
+
         /// <summary>
         /// 从文件加载数据
         /// </summary>
@@ -1021,15 +1029,6 @@ namespace Clandom.Models.BalancedRandom
         }
 
         /// <summary>
-        /// 获取当前黑名单
-        /// </summary>
-        /// <returns>黑名单学号列表</returns>
-        public List<int> GetBlacklist()
-        {
-            return _blacklist.ToList();
-        }
-
-        /// <summary>
         /// 检查学号是否在黑名单中
         /// </summary>
         public bool IsInBlacklist(int number)
@@ -1093,15 +1092,6 @@ namespace Clandom.Models.BalancedRandom
         }
 
         /// <summary>
-        /// 获取当前白名单
-        /// </summary>
-        /// <returns>白名单学号列表</returns>
-        public List<int> GetWhitelist()
-        {
-            return _whitelist.ToList();
-        }
-
-        /// <summary>
         /// 检查学号是否在白名单中
         /// </summary>
         public bool IsInWhitelist(int number)
@@ -1117,14 +1107,6 @@ namespace Clandom.Models.BalancedRandom
         {
             _whitelistOnlyMode = whitelistOnly;
             UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 获取当前是否处于白名单模式
-        /// </summary>
-        public bool GetWhitelistOnlyMode()
-        {
-            return _whitelistOnlyMode;
         }
 
         /// <summary>
@@ -1371,12 +1353,9 @@ namespace Clandom.Models.BalancedRandom
         {
             _rows = rows;
             _cols = cols;
-
-            // 生成2D专用的数据ID
             _dataIdPlane = BalancedRandDataManager.GenerateId("BalancedRandPlane",
                 rows, cols, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor);
 
-            // 加载历史数据
             if (loadData)
             {
                 LoadData();
@@ -1391,10 +1370,7 @@ namespace Clandom.Models.BalancedRandom
             try
             {
                 var allData = BalancedRandDataManager.LoadAllData(filePath);
-
-                // 优先使用2D专用ID，如果没有则尝试使用基类ID
-                if (allData.TryGetValue(_dataIdPlane, out var savedData) ||
-                    allData.TryGetValue(base.GetDataId(), out savedData))
+                if (allData.TryGetValue(_dataIdPlane, out var savedData))
                 {
                     ApplySavedData(savedData);
                     Debug.WriteLine($"已加载Plane数据: {_dataIdPlane}");
@@ -1430,41 +1406,15 @@ namespace Clandom.Models.BalancedRandom
             {
                 var allData = BalancedRandDataManager.LoadAllData(filePath);
 
-                // 获取基类的内部字典数据
-                var drawCountsField = typeof(BalancedRand).GetField("_drawCounts",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var drawCounts = (Dictionary<int, int>)drawCountsField.GetValue(this);
-
-                var lastDrawRoundField = typeof(BalancedRand).GetField("_lastDrawRound",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var lastDrawRound = (Dictionary<int, int>)lastDrawRoundField.GetValue(this);
-
-                var currentProbabilitiesField = typeof(BalancedRand).GetField("_currentProbabilities",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var currentProbabilities = (Dictionary<int, double>)currentProbabilitiesField.GetValue(this);
-
-                // 获取黑名单/白名单
-                var blacklistField = typeof(BalancedRand).GetField("_blacklist",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var blacklist = (HashSet<int>)blacklistField.GetValue(this);
-
-                var whitelistField = typeof(BalancedRand).GetField("_whitelist",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var whitelist = (HashSet<int>)whitelistField.GetValue(this);
-
-                var whitelistOnlyModeField = typeof(BalancedRand).GetField("_whitelistOnlyMode",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var whitelistOnlyMode = (bool)whitelistOnlyModeField.GetValue(this);
-
                 var data = new BalancedRandData
                 {
                     Id = _dataIdPlane,
                     LastUpdated = DateTime.Now,
-                    DrawCounts = new Dictionary<int, int>(drawCounts),
-                    LastDrawRound = new Dictionary<int, int>(lastDrawRound),
+                    DrawCounts = new Dictionary<int, int>(GetDrawCounts()),
+                    LastDrawRound = new Dictionary<int, int>(GetLastDrawRound()),
                     CurrentRound = GetCurrentRound(),
                     TotalDraws = GetTotalDraws(),
-                    CurrentProbabilities = new Dictionary<int, double>(currentProbabilities),
+                    CurrentProbabilities = new Dictionary<int, double>(GetCurrentProbabilities()),
                     MinPoolSize = GetMinPoolSize(),
                     MaxGapThreshold = GetMaxGapThreshold(),
                     ColdStartBoost = GetColdStartBoost(),
@@ -1472,9 +1422,9 @@ namespace Clandom.Models.BalancedRandom
                     Type = "BalancedRandPlane",
                     Rows = _rows,
                     Cols = _cols,
-                    Blacklist = new HashSet<int>(blacklist),
-                    Whitelist = new HashSet<int>(whitelist),
-                    WhitelistOnlyMode = whitelistOnlyMode
+                    Blacklist = new HashSet<int>(GetBlacklist()),
+                    Whitelist = new HashSet<int>(GetWhitelist()),
+                    WhitelistOnlyMode = GetWhitelistOnlyMode()
                 };
 
                 allData[_dataIdPlane] = data;
