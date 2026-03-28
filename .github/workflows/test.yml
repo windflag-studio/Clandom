@@ -1,0 +1,29 @@
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'   # 使用 .NET 10.0
+
+    - name: Restore dependencies
+      run: dotnet restore Clandom/Clandom.csproj
+
+    - name: Build
+      run: dotnet build Clandom/Clandom.csproj --no-restore --configuration Release
+
+    - name: Test
+      run: dotnet test Clandom/Clandom.csproj --no-build --configuration Release --verbosity normal
