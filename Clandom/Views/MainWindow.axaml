@@ -1,26 +1,35 @@
-<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Clandom.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:ui="using:FluentAvalonia.UI.Controls"
-        mc:Ignorable="d" d:DesignWidth="660" d:DesignHeight="580"
-        MinWidth="660" MinHeight="580" Closing="Window_OnClosing"
-        Width="{Binding Settings.MainWindowWidth,Mode=TwoWay}"
-        Height="{Binding Settings.MainWindowHeight,Mode=TwoWay}"
-        x:Class="Clandom.Views.MainWindow"
-        x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="Clandom">
+<windowing:AppWindow xmlns="https://github.com/avaloniaui"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                     xmlns:vm="using:Clandom.ViewModels"
+                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                     xmlns:ui="using:FluentAvalonia.UI.Controls"
+                     xmlns:windowing="clr-namespace:FluentAvalonia.UI.Windowing;assembly=FluentAvalonia"
+                     mc:Ignorable="d" d:DesignWidth="660" d:DesignHeight="580"
+                     MinWidth="660" MinHeight="580" Closing="Window_OnClosing"
+                     Width="{Binding Settings.MainWindowWidth,Mode=TwoWay}"
+                     Height="{Binding Settings.MainWindowHeight,Mode=TwoWay}"
+                     x:Class="Clandom.Views.MainWindow"
+                     x:DataType="vm:MainWindowViewModel"
+                     Icon="/Assets/avalonia-logo.ico"
+                     Title="Clandom">
     <Window.Resources>
         <ui:SymbolIconSource x:Key="FRandom" Symbol="Sync" />
         <ui:SymbolIconSource x:Key="FStatistics" Symbol="ContactInfo" />
+        <ui:SymbolIconSource x:Key="FSettings" Symbol="Settings" />
+        <ui:FontIconSource x:Key="FInfo" Glyph="&#xE946;" FontSize="255" />
     </Window.Resources>
-    <ui:NavigationView x:Name="NavigationView" SelectionChanged="NavigationView_OnSelectionChanged">
+    <ui:NavigationView x:Name="NavigationView" IsSettingsVisible="False"
+                       SelectionChanged="NavigationView_OnSelectionChanged">
         <ui:NavigationView.MenuItems>
             <ui:NavigationViewItem x:Name="HomePage" IconSource="{StaticResource FRandom}" Content="随机"
                                    Tag="RandomPage" />
             <ui:NavigationViewItem IconSource="{StaticResource FStatistics}" Content="统计" Tag="StatisticsPage" />
         </ui:NavigationView.MenuItems>
+        <ui:NavigationView.FooterMenuItems>
+            <ui:NavigationViewItem IconSource="{StaticResource FSettings}" Content="设置" Tag="SettingsPage" />
+            <ui:NavigationViewItem IconSource="{StaticResource FInfo}" Content="关于" Tag="InfoPage" />
+        </ui:NavigationView.FooterMenuItems>
+        <ui:Frame x:Name="ContentFrame" />
     </ui:NavigationView>
-</Window>
+</windowing:AppWindow>

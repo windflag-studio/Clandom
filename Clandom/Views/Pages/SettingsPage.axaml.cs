@@ -12,7 +12,7 @@ public partial class SettingsPage : UserControl
         InitializeComponent();
     }
 
-    private void Button_OnClick(object? sender, RoutedEventArgs e)
+    private void SettingsExpander_OnClick(object? sender, RoutedEventArgs e)
     {
         var floatingWindow = new FloatingWindow();
         floatingWindow.Show();

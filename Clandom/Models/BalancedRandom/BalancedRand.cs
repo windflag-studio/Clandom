@@ -1468,7 +1468,7 @@ namespace Clandom.Models.BalancedRandom
         /// <summary>
         /// 获取位置统计信息列表（行优先，固定长度 rows * cols，黑名单位置保留历史值）
         /// </summary>
-        public new List<int> GetPositionStatisticsList()
+        public List<int> GetPositionStatisticsList()
         {
             var list = new List<int>();
             for (int i = 0; i < _rows * _cols; i++)
@@ -1483,7 +1483,7 @@ namespace Clandom.Models.BalancedRandom
         /// <summary>
         /// 获取位置概率信息列表（行优先，固定长度 rows * cols，黑名单位置概率为0）
         /// </summary>
-        public new List<double> GetPositionProbabilityList()
+        public List<double> GetPositionProbabilityList()
         {
             var list = new List<double>();
             for (int i = 0; i < _rows * _cols; i++)
