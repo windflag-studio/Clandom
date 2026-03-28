@@ -85,128 +85,126 @@ jobs:
     outputs:
       changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Generate structured changelog
-        id: changelog
-        run: |
-          # 获取上一个标签（如果存在）
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          CURRENT_TAG="${{ needs.create-tag.outputs.tag_name }}"
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Generate structured changelog
+      id: changelog
+      run: |
+        # 获取上一个标签（如果存在）
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        CURRENT_TAG="${{ needs.create-tag.outputs.tag_name }}"
 
-          # 临时文件存储提交消息
-          TMP_FILE=$(mktemp)
+        # 临时文件存储提交消息
+        TMP_FILE=$(mktemp)
 
-          if [ -z "$PREV_TAG" ]; then
-            git log --pretty=format:"%s (%h)" --reverse > "$TMP_FILE"
-          else
-            git log "$PREV_TAG..$CURRENT_TAG" --pretty=format:"%s (%h)" --reverse > "$TMP_FILE"
-          fi
+        if [ -z "$PREV_TAG" ]; then
+          git log --pretty=format:"%s (%h)" --reverse > "$TMP_FILE"
+        else
+          git log "$PREV_TAG..$CURRENT_TAG" --pretty=format:"%s (%h)" --reverse > "$TMP_FILE"
+        fi
 
-          # 定义分类映射（中文标题）
-          declare -A categories=(
-            ["feat"]="🚀 新功能"
-            ["fix"]="🐛 问题修复"
-            ["docs"]="📝 文档更新"
-            ["style"]="🎨 代码样式"
-            ["refactor"]="♻️ 代码重构"
-            ["perf"]="⚡ 性能优化"
-            ["test"]="✅ 测试相关"
-            ["chore"]="🔧 构建/工具链"
-          )
+        # 定义分类映射（中文标题）
+        declare -A categories=(
+          ["feat"]="🚀 新功能"
+          ["fix"]="🐛 问题修复"
+          ["docs"]="📝 文档更新"
+          ["style"]="🎨 代码样式"
+          ["refactor"]="♻️ 代码重构"
+          ["perf"]="⚡ 性能优化"
+          ["test"]="✅ 测试相关"
+          ["chore"]="🔧 构建/工具链"
+        )
 
-          # 初始化各分类的数组
-          FEATURES=()
-          FIXES=()
-          DOCS=()
-          STYLE=()
-          REFACTOR=()
-          PERF=()
-          TESTS=()
-          CHORES=()
-          OTHERS=()
+        # 初始化各分类的数组
+        FEATURES=()
+        FIXES=()
+        DOCS=()
+        STYLE=()
+        REFACTOR=()
+        PERF=()
+        TESTS=()
+        CHORES=()
+        OTHERS=()
 
-          # 读取并分类
-          while IFS= read -r line; do
-            prefix=$(echo "$line" | sed -n 's/^\([a-z]*\):.*/\1/p')
-            case "$prefix" in
-              feat)     FEATURES+=("$line") ;;
-              fix)      FIXES+=("$line") ;;
-              docs)     DOCS+=("$line") ;;
-              style)    STYLE+=("$line") ;;
-              refactor) REFACTOR+=("$line") ;;
-              perf)     PERF+=("$line") ;;
-              test)     TESTS+=("$line") ;;
-              chore)    CHORES+=("$line") ;;
-              *)        OTHERS+=("$line") ;;
-            esac
-          done < "$TMP_FILE"
+        # 读取并分类
+        while IFS= read -r line; do
+          prefix=$(echo "$line" | sed -n 's/^\([a-z]*\):.*/\1/p')
+          case "$prefix" in
+            feat)     FEATURES+=("$line") ;;
+            fix)      FIXES+=("$line") ;;
+            docs)     DOCS+=("$line") ;;
+            style)    STYLE+=("$line") ;;
+            refactor) REFACTOR+=("$line") ;;
+            perf)     PERF+=("$line") ;;
+            test)     TESTS+=("$line") ;;
+            chore)    CHORES+=("$line") ;;
+            *)        OTHERS+=("$line") ;;
+          esac
+        done < "$TMP_FILE"
 
-          rm "$TMP_FILE"
+        rm "$TMP_FILE"
 
-          # 辅助函数：输出带编号的列表
-          print_numbered_list() {
-            local arr=("$@")
-            local i=1
-            for item in "${arr[@]}"; do
-              echo "$i. $item"
-              ((i++))
-            done
-          }
+        # 辅助函数：输出带编号的列表
+        print_numbered_list() {
+          local arr=("$@")
+          local i=1
+          for item in "${arr[@]}"; do
+            echo "$i. $item"
+            ((i++))
+          done
+        }
 
-          # 构建最终的 changelog 内容（Markdown）
-          CHANGELOG=""
+        # 构建最终的 changelog 内容（Markdown）
+        CHANGELOG=""
 
-          if [ ${#FEATURES[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[feat]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${FEATURES[@]}")\n\n"
-          fi
-          if [ ${#FIXES[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[fix]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${FIXES[@]}")\n\n"
-          fi
-          if [ ${#DOCS[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[docs]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${DOCS[@]}")\n\n"
-          fi
-          if [ ${#STYLE[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[style]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${STYLE[@]}")\n\n"
-          fi
-          if [ ${#REFACTOR[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[refactor]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${REFACTOR[@]}")\n\n"
-          fi
-          if [ ${#PERF[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[perf]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${PERF[@]}")\n\n"
-          fi
-          if [ ${#TESTS[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[test]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${TESTS[@]}")\n\n"
-          fi
-          if [ ${#CHORES[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## ${categories[chore]}\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${CHORES[@]}")\n\n"
-          fi
-          if [ ${#OTHERS[@]} -gt 0 ]; then
-            CHANGELOG="${CHANGELOG}## 其他\n"
-            CHANGELOG="${CHANGELOG}$(print_numbered_list "${OTHERS[@]}")\n\n"
-          fi
+        if [ ${#FEATURES[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[feat]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${FEATURES[@]}")\n\n"
+        fi
+        if [ ${#FIXES[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[fix]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${FIXES[@]}")\n\n"
+        fi
+        if [ ${#DOCS[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[docs]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${DOCS[@]}")\n\n"
+        fi
+        if [ ${#STYLE[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[style]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${STYLE[@]}")\n\n"
+        fi
+        if [ ${#REFACTOR[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[refactor]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${REFACTOR[@]}")\n\n"
+        fi
+        if [ ${#PERF[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[perf]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${PERF[@]}")\n\n"
+        fi
+        if [ ${#TESTS[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[test]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${TESTS[@]}")\n\n"
+        fi
+        if [ ${#CHORES[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## ${categories[chore]}\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${CHORES[@]}")\n\n"
+        fi
+        if [ ${#OTHERS[@]} -gt 0 ]; then
+          CHANGELOG="${CHANGELOG}## 其他\n"
+          CHANGELOG="${CHANGELOG}$(print_numbered_list "${OTHERS[@]}")\n\n"
+        fi
 
-          # 如果没有提交
-          if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="自上个版本以来没有变更。"
-          fi
+        # 如果没有提交
+        if [ -z "$CHANGELOG" ]; then
+          CHANGELOG="自上个版本以来没有变更。"
+        fi
 
-          # 对输出进行转义（保留换行）
-          CHANGELOG="${CHANGELOG//'%'/'%25'}"
-          CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
-          CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
-          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
-
+        # 使用多行输出方式，避免转义问题
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
   # 创建 GitHub Release（直接发布，非草稿）
   create-release:
     runs-on: ubuntu-latest
