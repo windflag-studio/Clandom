@@ -8,6 +8,8 @@ namespace Clandom.Views;
 
 public partial class MainWindow : Window
 {
+    bool isTransparent = false;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -34,6 +36,7 @@ public partial class MainWindow : Window
 
     private async void Window_OnClosing(object? sender, WindowClosingEventArgs e)
     {
+        if (isTransparent) return;
         e.Cancel = true;
         var dialog = new ContentDialog()
         {
@@ -43,20 +46,23 @@ public partial class MainWindow : Window
             SecondaryButtonText = "最小化到托盘",
             CloseButtonText = "确定"
         };
-        var result = await dialog.ShowAsync();
+        Activate();
+        var result = await dialog.ShowAsync(this);
         if (result == ContentDialogResult.Primary)
         {
             return;
         }
-        // if (result == ContentDialogResult.Secondary)
-        // {
-        //     Hide();
-        // }
+
+        if (result == ContentDialogResult.Secondary)
+        {
+            Hide();
+        }
         else
         {
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopApp)
             {
-                desktopApp.Shutdown();
+                isTransparent = true;
+                desktopApp.TryShutdown();
             }
         }
     }

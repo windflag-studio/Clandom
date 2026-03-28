@@ -22,7 +22,7 @@
         <vm:FloatingWindowViewModel />
     </Window.DataContext>
     <StackPanel Orientation="Horizontal" Margin="4,4,4,4" Spacing="2">
-        <controls:FluentIcon Glyph="&#xee46;" FontSize="20" Margin="0,0,-2,0" />
+        <controls:FluentIcon FontFamily="{StaticResource FluentIcons}" Glyph="&#xee46;" FontSize="20" Margin="0,0,-2,0" />
         <Button Classes="accent" Click="RunButton_OnClick">
             <ui:SymbolIcon Symbol="People" FontSize="18" />
         </Button>

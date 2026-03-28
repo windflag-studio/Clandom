@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         mc:Ignorable="d" d:DesignWidth="660" d:DesignHeight="580"
-        MinWidth="660" MinHeight="580"
+        MinWidth="660" MinHeight="580" Closing="Window_OnClosing"
         Width="{Binding Settings.MainWindowWidth,Mode=TwoWay}"
         Height="{Binding Settings.MainWindowHeight,Mode=TwoWay}"
         x:Class="Clandom.Views.MainWindow"

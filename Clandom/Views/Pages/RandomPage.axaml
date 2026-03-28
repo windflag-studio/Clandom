@@ -46,6 +46,8 @@
             </StackPanel>
             <Button x:Name="Run" Classes="accent" Content="抽" Click="Run_OnClick" />
         </StackPanel>
-        <TextBlock Grid.Row="2" x:Name="Result" Text="1" FontSize="150" TextWrapping="Wrap" />
+        <Viewbox Grid.Row="2" Stretch="Uniform" StretchDirection="Both">
+            <TextBlock x:Name="Result" Text="1" FontSize="150" TextWrapping="NoWrap" />
+        </Viewbox>
     </Grid>
 </UserControl>

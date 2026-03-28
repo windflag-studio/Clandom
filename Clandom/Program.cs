@@ -10,7 +10,7 @@ sealed class Program
     /// Fluent Icons 字体
     /// </summary>
     public static FontFamily FluentIconsFontFamily { get; } =
-        new FontFamily("avares://Clandom/Assets/Fonts/#FluentSystemIcons-Resizable");
+        new FontFamily("avares://Clandom/Assets/Fonts/FluentSystemIcons-Resizable.ttf#FluentSystemIcons-Resizable");
 
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized

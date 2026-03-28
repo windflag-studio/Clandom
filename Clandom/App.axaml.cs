@@ -1,9 +1,10 @@
 using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
+using Avalonia.Platform;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
+using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Clandom.Service.Settings;
 using Clandom.ViewModels;
@@ -13,6 +14,7 @@ namespace Clandom;
 
 public class App : Application
 {
+    private TrayIcon _trayIcon;
     public static AppSettings Settings { get; private set; }
 
     public override void Initialize()
@@ -34,6 +36,20 @@ public class App : Application
             {
                 DataContext = new MainWindowViewModel(),
             };
+            var showItem = new NativeMenuItem("显示窗口");
+            showItem.Click += ShowWindow_Click;
+            var exitItem = new NativeMenuItem("退出");
+            exitItem.Click += Exit_Click;
+            var iconUri = new Uri("avares://Clandom/Assets/avalonia-logo.ico");
+            using var iconStream = AssetLoader.Open(iconUri);
+
+            _trayIcon = new TrayIcon
+            {
+                Icon = new WindowIcon(iconStream),
+                ToolTipText = "Clandom",
+                Menu = new NativeMenu { Items = { showItem, exitItem } }
+            };
+            _trayIcon.IsVisible = true;
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -50,6 +66,24 @@ public class App : Application
         {
             BindingPlugins.DataValidators.Remove(plugin);
         }
+    }
+
+    private void ShowWindow_Click(object? sender, EventArgs e)
+    {
+        var mainWindow = Application.Current?.ApplicationLifetime as ClassicDesktopStyleApplicationLifetime;
+        if (mainWindow?.MainWindow != null)
+        {
+            mainWindow.MainWindow.Show();
+            mainWindow.MainWindow.WindowState = WindowState.Normal;
+            mainWindow.MainWindow.Activate();
+        }
+    }
+
+    private void Exit_Click(object? sender, EventArgs e)
+    {
+        _trayIcon?.Dispose(); // 移除托盘图标
+        SettingsManager.Save(Settings);
+        Environment.Exit(0);
     }
 
     private void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e)
