@@ -85,28 +85,110 @@ jobs:
     outputs:
       changelog: ${{ steps.changelog.outputs.changelog }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # 获取上一个标签（如果存在）
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          CURRENT_TAG="${{ needs.create-tag.outputs.tag_name }}"
-          if [ -z "$PREV_TAG" ]; then
-            # 首次发布，列出所有提交
-            LOG=$(git log --pretty=format:"- %s (%h)" --reverse)
-          else
-            LOG=$(git log "$PREV_TAG..$CURRENT_TAG" --pretty=format:"- %s (%h)" --reverse)
-          fi
-          # 转义多行内容以便在 GitHub Actions 中输出
-          LOG="${LOG//'%'/'%25'}"
-          LOG="${LOG//$'\n'/'%0A'}"
-          LOG="${LOG//$'\r'/'%0D'}"
-          echo "changelog=$LOG" >> $GITHUB_OUTPUT
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Generate structured changelog
+      id: changelog
+      run: |
+        # 获取上一个标签（如果存在）
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        CURRENT_TAG="${{ needs.create-tag.outputs.tag_name }}"
 
+        # 定义分类映射
+        declare -A categories=(
+          ["feat"]="🚀 Features"
+          ["fix"]="🐛 Bug Fixes"
+          ["docs"]="📝 Documentation"
+          ["style"]="🎨 Code Style"
+          ["refactor"]="♻️ Refactor"
+          ["perf"]="⚡ Performance"
+          ["test"]="✅ Tests"
+          ["chore"]="🔧 Chores"
+        )
+
+        # 临时文件
+        TMP_FILE=$(mktemp)
+
+        # 获取提交日志，并逐条处理
+        if [ -z "$PREV_TAG" ]; then
+          git log --pretty=format:"%s (%h)" --reverse > "$TMP_FILE"
+        else
+          git log "$PREV_TAG..$CURRENT_TAG" --pretty=format:"%s (%h)" --reverse > "$TMP_FILE"
+        fi
+
+        # 初始化各分类的内容变量
+        FEATURES=""
+        FIXES=""
+        DOCS=""
+        STYLE=""
+        REFACTOR=""
+        PERF=""
+        TESTS=""
+        CHORES=""
+        OTHERS=""
+
+        # 读取并分类
+        while IFS= read -r line; do
+          # 提取消息前缀（小写）
+          prefix=$(echo "$line" | sed -n 's/^\([a-z]*\):.*/\1/p')
+          case "$prefix" in
+            feat)     FEATURES="$FEATURES- $line\n" ;;
+            fix)      FIXES="$FIXES- $line\n" ;;
+            docs)     DOCS="$DOCS- $line\n" ;;
+            style)    STYLE="$STYLE- $line\n" ;;
+            refactor) REFACTOR="$REFACTOR- $line\n" ;;
+            perf)     PERF="$PERF- $line\n" ;;
+            test)     TESTS="$TESTS- $line\n" ;;
+            chore)    CHORES="$CHORES- $line\n" ;;
+            *)        OTHERS="$OTHERS- $line\n" ;;
+          esac
+        done < "$TMP_FILE"
+
+        rm "$TMP_FILE"
+
+        # 构建最终的 changelog 内容
+        CHANGELOG=""
+
+        if [ -n "$FEATURES" ]; then
+          CHANGELOG="${CHANGELOG}## 🚀 特性\n${FEATURES}\n"
+        fi
+        if [ -n "$FIXES" ]; then
+          CHANGELOG="${CHANGELOG}## 🐛 Bug修复\n${FIXES}\n"
+        fi
+        if [ -n "$DOCS" ]; then
+          CHANGELOG="${CHANGELOG}## 📝 文档\n${DOCS}\n"
+        fi
+        if [ -n "$STYLE" ]; then
+          CHANGELOG="${CHANGELOG}## 🎨 代码格式\n${STYLE}\n"
+        fi
+        if [ -n "$REFACTOR" ]; then
+          CHANGELOG="${CHANGELOG}## ♻️ 重做\n${REFACTOR}\n"
+        fi
+        if [ -n "$PERF" ]; then
+          CHANGELOG="${CHANGELOG}## ⚡ 性能\n${PERF}\n"
+        fi
+        if [ -n "$TESTS" ]; then
+          CHANGELOG="${CHANGELOG}## ✅ 测试\n${TESTS}\n"
+        fi
+        if [ -n "$CHORES" ]; then
+          CHANGELOG="${CHANGELOG}## 🔧 杂物\n${CHORES}\n"
+        fi
+        if [ -n "$OTHERS" ]; then
+          CHANGELOG="${CHANGELOG}## 其它\n${OTHERS}\n"
+        fi
+
+        # 如果没有提交，显示提示
+        if [ -z "$CHANGELOG" ]; then
+          CHANGELOG="No changes since previous release."
+        fi
+
+        # 转义多行内容以供 GitHub Actions 输出
+        CHANGELOG="${CHANGELOG//'%'/'%25'}"
+        CHANGELOG="${CHANGELOG//$'\n'/'%0A'}"
+        CHANGELOG="${CHANGELOG//$'\r'/'%0D'}"
+        echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
   # 创建 GitHub Release（草稿，但可根据类型设置预发布）
   create-release:
     runs-on: ubuntu-latest
@@ -181,14 +263,14 @@ jobs:
           rm -rf deb_package
       - name: Build AppImage package
         run: |
-          VERSION="${{ needs.create-tag.outputs.version_name }}"
           appdir="AppDir"
           mkdir -p $appdir/usr/bin
           cp -r publish/linux-x64/self-contained/* $appdir/usr/bin/
           printf '[Desktop Entry]\nName=Clandom\nComment=Avalonia Application\nExec=Clandom\nIcon=Clandom\nTerminal=false\nType=Application\nCategories=Utility;\n' > $appdir/Clandom.desktop
           printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=$(dirname "$SELF")\nexec "$HERE/usr/bin/Clandom" "$@"\n' > $appdir/AppRun
           chmod +x $appdir/AppRun
-          appimagetool $appdir Clandom-$VERSION-Linux-x64.AppImage
+          # 使用 --appimage-extract-and-run 运行
+          ./appimagetool-x86_64.AppImage --appimage-extract-and-run $appdir Clandom-Linux-x64.AppImage
           rm -rf $appdir
       - name: Upload .deb
         uses: actions/upload-release-asset@v1
