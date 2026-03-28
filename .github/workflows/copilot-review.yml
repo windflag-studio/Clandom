@@ -1,0 +1,88 @@
+name: Copilot Code Review
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'   # 使用 .NET 10.0
+
+    - name: Restore dependencies
+      run: dotnet restore Clandom/Clandom.csproj
+
+    - name: Run code format check
+      id: format
+      continue-on-error: true
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+
+    - name: Build and collect warnings
+      id: build
+      run: |
+        dotnet build Clandom/Clandom.csproj --no-restore --configuration Release /p:WarningsAsErrors=false > build_output.txt 2>&1
+        grep -E 'warning [A-Z]+[0-9]+' build_output.txt > warnings.txt || true
+
+    - name: Post review comments
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const formatStatus = '${{ steps.format.outcome }}';
+          const fs = require('fs');
+          let commentBody = '### 🤖 Copilot Code Review\n\n';
+
+          // Format check
+          if (formatStatus === 'failure') {
+            commentBody += '❌ **Code format issues detected.** Run `dotnet format` locally to fix.\n\n';
+          } else {
+            commentBody += '✅ **Code format check passed.**\n\n';
+          }
+
+          // Warnings
+          const warningsFile = 'warnings.txt';
+          if (fs.existsSync(warningsFile)) {
+            const warnings = fs.readFileSync(warningsFile, 'utf8').trim();
+            if (warnings) {
+              commentBody += '⚠️ **Build warnings:**\n```\n' + warnings + '\n```\n\n';
+            } else {
+              commentBody += '✅ **No build warnings.**\n\n';
+            }
+          } else {
+            commentBody += '✅ **No build warnings.**\n\n';
+          }
+
+          commentBody += '---\n*This review is generated automatically. Please address any issues before merging.*';
+
+          // Find existing comment to update
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.payload.pull_request.number,
+          });
+          const botComment = comments.find(c => c.user.type === 'Bot' && c.body.includes('Copilot Code Review'));
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: commentBody,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: commentBody,
+            });
+          }
