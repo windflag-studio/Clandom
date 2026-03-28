@@ -40,7 +40,7 @@ public class App : Application
             showItem.Click += ShowWindow_Click;
             var exitItem = new NativeMenuItem("退出");
             exitItem.Click += Exit_Click;
-            var iconUri = new Uri("avares://Clandom/Assets/avalonia-logo.ico");
+            var iconUri = new Uri("avares://Clandom/Assets/icon.png");
             using var iconStream = AssetLoader.Open(iconUri);
 
             _trayIcon = new TrayIcon

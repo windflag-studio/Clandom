@@ -11,7 +11,7 @@
                      Height="{Binding Settings.MainWindowHeight,Mode=TwoWay}"
                      x:Class="Clandom.Views.MainWindow"
                      x:DataType="vm:MainWindowViewModel"
-                     Icon="/Assets/avalonia-logo.ico"
+                     Icon="/Assets/icon.png"
                      Title="Clandom">
     <Window.Resources>
         <ui:SymbolIconSource x:Key="FRandom" Symbol="Sync" />
