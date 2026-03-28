@@ -284,8 +284,8 @@ jobs:
           printf '[Desktop Entry]\nName=Clandom\nComment=Avalonia Application\nExec=Clandom\nIcon=Clandom\nTerminal=false\nType=Application\nCategories=Utility;\n' > $appdir/Clandom.desktop
           printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=$(dirname "$SELF")\nexec "$HERE/usr/bin/Clandom" "$@"\n' > $appdir/AppRun
           chmod +x $appdir/AppRun
-          # 使用 --appimage-extract-and-run 避免 FUSE 依赖
-          ./appimagetool-x86_64.AppImage --appimage-extract-and-run $appdir "Clandom-${VERSION}-Linux-x64.AppImage"
+          # 明确指定架构为 x86_64
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run $appdir "Clandom-${VERSION}-Linux-x64.AppImage"
           rm -rf $appdir
       - name: Upload .deb
         uses: actions/upload-release-asset@v1
