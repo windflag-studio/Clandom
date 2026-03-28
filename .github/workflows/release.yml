@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.0.0 or 1.0.0)'
+        description: 'Release version (e.g., 1.0.0)'
         required: true
         type: string
       release_type:
@@ -78,12 +78,11 @@ jobs:
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
           echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
-  # 生成结构化的变更日志（中文分类，带编号）
   generate-changelog:
     runs-on: ubuntu-latest
     needs: create-tag
     outputs:
-      changelog: ${{ steps.changelog.outputs.changelog }}
+      changelog_file: ${{ steps.save.outputs.file }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -182,9 +181,16 @@ jobs:
           CHANGELOG="自上个版本以来没有变更。"
         fi
 
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
-        echo "$CHANGELOG" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        # 写入文件，保留原始换行
+        echo -e "$CHANGELOG" > changelog.md
+    - name: Upload changelog artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: changelog
+        path: changelog.md
+    - name: Set output file path
+      id: save
+      run: echo "file=changelog.md" >> $GITHUB_OUTPUT
 
   create-release:
     runs-on: ubuntu-latest
@@ -194,17 +200,22 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ needs.create-tag.outputs.tag_name }}
-          name: ${{ needs.create-tag.outputs.tag_name }}
-          body: ${{ needs.generate-changelog.outputs.changelog }}
-          draft: false          # 直接发布
-          prerelease: ${{ needs.create-tag.outputs.prerelease }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Download changelog
+      uses: actions/download-artifact@v4
+      with:
+        name: changelog
+        path: .
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.create-tag.outputs.tag_name }}
+        name: ${{ needs.create-tag.outputs.tag_name }}
+        body_path: changelog.md
+        draft: false
+        prerelease: ${{ needs.create-tag.outputs.prerelease }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
     runs-on: ubuntu-latest
