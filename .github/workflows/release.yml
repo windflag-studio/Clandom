@@ -4,27 +4,68 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.0.0)'
+        description: 'Release version (e.g., v1.0.0 or 1.0.0)'
         required: true
         type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - release
+          - beta
+          - alpha
 
 jobs:
-  # 创建 Git 标签
+  # 创建 Git 标签（根据类型自动补全后缀）
   create-tag:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     outputs:
       tag_name: ${{ steps.tag.outputs.tag }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+      version_name: ${{ steps.tag.outputs.version_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Create and push tag
+      - name: Normalize version and tag
         id: tag
         run: |
-          TAG="${{ github.event.inputs.version }}"
+          RAW_VERSION="${{ github.event.inputs.version }}"
+          TYPE="${{ github.event.inputs.release_type }}"
+          # 移除版本号开头的 'v' 如果存在
+          VERSION="${RAW_VERSION#v}"
+          # 根据类型决定标签和预发布标志
+          case "$TYPE" in
+            release)
+              # release 版本必须不包含 alpha/beta 等后缀
+              if [[ "$VERSION" =~ (alpha|beta|rc) ]]; then
+                echo "Error: release version must not contain alpha/beta/rc suffixes." >&2
+                exit 1
+              fi
+              TAG="v$VERSION"
+              PRERELEASE="false"
+              ;;
+            beta)
+              # beta 版本必须包含 beta 或自动添加 -beta
+              if [[ ! "$VERSION" =~ beta ]]; then
+                VERSION="${VERSION}-beta"
+              fi
+              TAG="v$VERSION"
+              PRERELEASE="true"
+              ;;
+            alpha)
+              if [[ ! "$VERSION" =~ alpha ]]; then
+                VERSION="${VERSION}-alpha"
+              fi
+              TAG="v$VERSION"
+              PRERELEASE="true"
+              ;;
+          esac
+          # 检查标签是否已存在
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "Tag $TAG already exists, will reuse it."
           else
@@ -34,11 +75,42 @@ jobs:
             git push origin "$TAG"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
 
-  # 创建 GitHub Release（草稿）
-  create-release:
+  # 生成变更日志
+  generate-changelog:
     runs-on: ubuntu-latest
     needs: create-tag
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # 获取上一个标签（如果存在）
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          CURRENT_TAG="${{ needs.create-tag.outputs.tag_name }}"
+          if [ -z "$PREV_TAG" ]; then
+            # 首次发布，列出所有提交
+            LOG=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            LOG=$(git log "$PREV_TAG..$CURRENT_TAG" --pretty=format:"- %s (%h)" --reverse)
+          fi
+          # 转义多行内容以便在 GitHub Actions 中输出
+          LOG="${LOG//'%'/'%25'}"
+          LOG="${LOG//$'\n'/'%0A'}"
+          LOG="${LOG//$'\r'/'%0D'}"
+          echo "changelog=$LOG" >> $GITHUB_OUTPUT
+
+  # 创建 GitHub Release（草稿，但可根据类型设置预发布）
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [create-tag, generate-changelog]
     permissions:
       contents: write
     outputs:
@@ -49,16 +121,21 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.create-tag.outputs.tag_name }}
-          name: Release ${{ needs.create-tag.outputs.tag_name }}
+          name: ${{ needs.create-tag.outputs.tag_name }}
+          body: |
+            ## Changelog
+            ${{ needs.generate-changelog.outputs.changelog }}
           draft: true
-          prerelease: false
+          prerelease: ${{ needs.create-tag.outputs.prerelease }}
+          # 可选：让 GitHub 自动生成 Release Notes，与 body 合并
+          # generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Linux 构建（仅自包含）
   build-linux:
     runs-on: ubuntu-latest
-    needs: create-release
+    needs: [create-release, create-tag]
     permissions:
       contents: write
     steps:
@@ -68,6 +145,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Validate version for Debian package
+        run: |
+          VERSION="${{ needs.create-tag.outputs.version_name }}"
+          if [[ ! "$VERSION" =~ ^[0-9] ]]; then
+            echo "Error: Debian package version must start with a digit. Provided version: $VERSION"
+            exit 1
+          fi
+          echo "Version $VERSION is valid for Debian."
       - name: Install appimagetool
         run: |
           wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
@@ -80,30 +165,30 @@ jobs:
             -o publish/linux-x64/self-contained
       - name: Build .deb package
         run: |
-          # 准备 DEBIAN 目录结构
+          VERSION="${{ needs.create-tag.outputs.version_name }}"
           mkdir -p deb_package/DEBIAN
           mkdir -p deb_package/usr/local/bin
           cp -r publish/linux-x64/self-contained/* deb_package/usr/local/bin/
           printf "Package: clandom\n" > deb_package/DEBIAN/control
-          printf "Version: ${{ github.event.inputs.version }}\n" >> deb_package/DEBIAN/control
+          printf "Version: $VERSION\n" >> deb_package/DEBIAN/control
           printf "Section: utils\n" >> deb_package/DEBIAN/control
           printf "Priority: optional\n" >> deb_package/DEBIAN/control
           printf "Architecture: amd64\n" >> deb_package/DEBIAN/control
-          printf "Maintainer: Ivan 2917822657@qq.com\n" >> deb_package/DEBIAN/control
+          printf "Maintainer: Ivan <2917822657@qq.com>\n" >> deb_package/DEBIAN/control
           printf "Description: Clandom - Avalonia Application\n" >> deb_package/DEBIAN/control
           printf " Clandom is a cross-platform application built with Avalonia.\n" >> deb_package/DEBIAN/control
-          # 打包
-          dpkg-deb --build deb_package ./Clandom-Linux-x64.deb
+          dpkg-deb --build deb_package ./Clandom-$VERSION-Linux-x64.deb
           rm -rf deb_package
       - name: Build AppImage package
         run: |
+          VERSION="${{ needs.create-tag.outputs.version_name }}"
           appdir="AppDir"
           mkdir -p $appdir/usr/bin
           cp -r publish/linux-x64/self-contained/* $appdir/usr/bin/
           printf '[Desktop Entry]\nName=Clandom\nComment=Avalonia Application\nExec=Clandom\nIcon=Clandom\nTerminal=false\nType=Application\nCategories=Utility;\n' > $appdir/Clandom.desktop
           printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=$(dirname "$SELF")\nexec "$HERE/usr/bin/Clandom" "$@"\n' > $appdir/AppRun
           chmod +x $appdir/AppRun
-          appimagetool $appdir Clandom-Linux-x64.AppImage
+          appimagetool $appdir Clandom-$VERSION-Linux-x64.AppImage
           rm -rf $appdir
       - name: Upload .deb
         uses: actions/upload-release-asset@v1
@@ -111,8 +196,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./Clandom-Linux-x64.deb
-          asset_name: Clandom-Linux-x64.deb
+          asset_path: ./Clandom-${{ needs.create-tag.outputs.version_name }}-Linux-x64.deb
+          asset_name: Clandom-${{ needs.create-tag.outputs.version_name }}-Linux-x64.deb
           asset_content_type: application/vnd.debian.binary-package
       - name: Upload .AppImage
         uses: actions/upload-release-asset@v1
@@ -120,14 +205,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./Clandom-Linux-x64.AppImage
-          asset_name: Clandom-Linux-x64.AppImage
+          asset_path: ./Clandom-${{ needs.create-tag.outputs.version_name }}-Linux-x64.AppImage
+          asset_name: Clandom-${{ needs.create-tag.outputs.version_name }}-Linux-x64.AppImage
           asset_content_type: application/x-executable
 
   # macOS 构建（两种模式）
   build-macos:
     runs-on: macos-latest
-    needs: create-release
+    needs: [create-release, create-tag]
     permissions:
       contents: write
     steps:
@@ -149,6 +234,7 @@ jobs:
             -o publish/osx-x64/framework-dependent
       - name: Build .pkg packages
         run: |
+          VERSION="${{ needs.create-tag.outputs.version_name }}"
           build_pkg() {
             local source_dir=$1
             local output_name=$2
@@ -159,16 +245,16 @@ jobs:
             pkgbuild --root $app_name --identifier com.yourcompany.clandom --version 1.0 $output_name
             rm -rf $app_name
           }
-          build_pkg "publish/osx-x64/self-contained" "Clandom-macOS-x64-SelfContained.pkg"
-          build_pkg "publish/osx-x64/framework-dependent" "Clandom-macOS-x64-FrameworkDependent.pkg"
+          build_pkg "publish/osx-x64/self-contained" "Clandom-${VERSION}-macOS-x64-SelfContained.pkg"
+          build_pkg "publish/osx-x64/framework-dependent" "Clandom-${VERSION}-macOS-x64-FrameworkDependent.pkg"
       - name: Upload .pkg (self-contained)
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./Clandom-macOS-x64-SelfContained.pkg
-          asset_name: Clandom-macOS-x64-SelfContained.pkg
+          asset_path: ./Clandom-${{ needs.create-tag.outputs.version_name }}-macOS-x64-SelfContained.pkg
+          asset_name: Clandom-${{ needs.create-tag.outputs.version_name }}-macOS-x64-SelfContained.pkg
           asset_content_type: application/x-newton-compatible-pkg
       - name: Upload .pkg (framework-dependent)
         uses: actions/upload-release-asset@v1
@@ -176,14 +262,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./Clandom-macOS-x64-FrameworkDependent.pkg
-          asset_name: Clandom-macOS-x64-FrameworkDependent.pkg
+          asset_path: ./Clandom-${{ needs.create-tag.outputs.version_name }}-macOS-x64-FrameworkDependent.pkg
+          asset_name: Clandom-${{ needs.create-tag.outputs.version_name }}-macOS-x64-FrameworkDependent.pkg
           asset_content_type: application/x-newton-compatible-pkg
 
   # Windows 构建（自包含 ZIP）
   build-windows:
     runs-on: windows-latest
-    needs: create-release
+    needs: [create-release, create-tag]
     permissions:
       contents: write
     steps:
@@ -200,13 +286,13 @@ jobs:
             -o publish/win-x64/self-contained
       - name: Create ZIP archive
         run: |
-          Compress-Archive -Path publish/win-x64/self-contained/* -DestinationPath Clandom-Windows-x64.zip
+          Compress-Archive -Path publish/win-x64/self-contained/* -DestinationPath Clandom-${{ needs.create-tag.outputs.version_name }}-Windows-x64.zip
       - name: Upload ZIP
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./Clandom-Windows-x64.zip
-          asset_name: Clandom-Windows-x64.zip
+          asset_path: ./Clandom-${{ needs.create-tag.outputs.version_name }}-Windows-x64.zip
+          asset_name: Clandom-${{ needs.create-tag.outputs.version_name }}-Windows-x64.zip
           asset_content_type: application/zip
