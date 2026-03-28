@@ -40,15 +40,14 @@ public partial class MainWindow : AppWindow
                 Content = "如果点击“确定”，悬浮窗将一并关闭，而“最小化到托盘”则不会。",
                 PrimaryButtonText = "取消",
                 SecondaryButtonText = "最小化到托盘",
-                CloseButtonText = "确定"
+                CloseButtonText = "确定",
+                DefaultButton = ContentDialogButton.Secondary
             };
-            Activate();
             var result = await dialog.ShowAsync(this);
             if (result == ContentDialogResult.Primary)
             {
                 return;
             }
-
             if (result == ContentDialogResult.Secondary)
             {
                 Hide();
