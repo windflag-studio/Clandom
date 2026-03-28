@@ -68,8 +68,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Install dotnet-deb tool
-        run: dotnet tool install -g dotnet-deb
       - name: Install appimagetool
         run: |
           wget -c "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
@@ -82,8 +80,21 @@ jobs:
             -o publish/linux-x64/self-contained
       - name: Build .deb package
         run: |
-          dotnet deb Clandom/Clandom.csproj -c Release -r linux-x64 -p:SelfContained=true -o ./deb
-          mv ./deb/*.deb ./Clandom-Linux-x64.deb
+          # 准备 DEBIAN 目录结构
+          mkdir -p deb_package/DEBIAN
+          mkdir -p deb_package/usr/local/bin
+          cp -r publish/linux-x64/self-contained/* deb_package/usr/local/bin/
+          printf "Package: clandom\n" > deb_package/DEBIAN/control
+          printf "Version: ${{ github.event.inputs.version }}\n" >> deb_package/DEBIAN/control
+          printf "Section: utils\n" >> deb_package/DEBIAN/control
+          printf "Priority: optional\n" >> deb_package/DEBIAN/control
+          printf "Architecture: amd64\n" >> deb_package/DEBIAN/control
+          printf "Maintainer: Ivan 2917822657@qq.com\n" >> deb_package/DEBIAN/control
+          printf "Description: Clandom - Avalonia Application\n" >> deb_package/DEBIAN/control
+          printf " Clandom is a cross-platform application built with Avalonia.\n" >> deb_package/DEBIAN/control
+          # 打包
+          dpkg-deb --build deb_package ./Clandom-Linux-x64.deb
+          rm -rf deb_package
       - name: Build AppImage package
         run: |
           appdir="AppDir"
