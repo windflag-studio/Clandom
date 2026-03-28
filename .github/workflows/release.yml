@@ -279,10 +279,19 @@ jobs:
           appdir="AppDir"
           mkdir -p $appdir/usr/bin
           cp -r publish/linux-x64/self-contained/* $appdir/usr/bin/
+
+          # --- 添加图标处理 ---
+          ICON_SRC="Clandom/Assets/icon.png"
+          cp "$ICON_SRC" "$appdir/Clandom.png"
+
+          # 创建 desktop 文件（Icon 字段与上面复制后的文件名一致）
           printf '[Desktop Entry]\nName=Clandom\nComment=Avalonia Application\nExec=Clandom\nIcon=Clandom\nTerminal=false\nType=Application\nCategories=Utility;\n' > $appdir/Clandom.desktop
+
+          # 创建 AppRun 启动脚本
           printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=$(dirname "$SELF")\nexec "$HERE/usr/bin/Clandom" "$@"\n' > $appdir/AppRun
           chmod +x $appdir/AppRun
-          # 明确指定架构为 x86_64
+
+          # 指定架构并运行 appimagetool
           ARCH=x86_64 ./appimagetool-x86_64.AppImage --appimage-extract-and-run $appdir "Clandom-${VERSION}-Linux-x64.AppImage"
           rm -rf $appdir
       - name: Upload .deb
