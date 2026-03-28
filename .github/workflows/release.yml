@@ -98,14 +98,14 @@ jobs:
 
         # 定义分类映射
         declare -A categories=(
-          ["feat"]="🚀 Features"
-          ["fix"]="🐛 Bug Fixes"
-          ["docs"]="📝 Documentation"
-          ["style"]="🎨 Code Style"
-          ["refactor"]="♻️ Refactor"
-          ["perf"]="⚡ Performance"
-          ["test"]="✅ Tests"
-          ["chore"]="🔧 Chores"
+          ["feat"]="🚀 特性"
+          ["fix"]="🐛 Bug修复"
+          ["docs"]="📝 文档"
+          ["style"]="🎨 代码格式"
+          ["refactor"]="♻️ 重做"
+          ["perf"]="⚡ 性能"
+          ["test"]="✅ 测试"
+          ["chore"]="🔧 杂物"
         )
 
         # 临时文件
