@@ -17,7 +17,7 @@
         <ui:SymbolIconSource x:Key="FRandom" Symbol="Sync" />
         <ui:SymbolIconSource x:Key="FStatistics" Symbol="ContactInfo" />
         <ui:SymbolIconSource x:Key="FSettings" Symbol="Settings" />
-        <ui:FontIconSource x:Key="FInfo" Glyph="&#xE946;" FontSize="255" />
+        <ui:FontIconSource x:Key="FInfo" Glyph="&#xf51c;" FontFamily="{StaticResource FluentIcons}"/>
     </Window.Resources>
     <ui:NavigationView x:Name="NavigationView" IsSettingsVisible="False"
                        SelectionChanged="NavigationView_OnSelectionChanged">

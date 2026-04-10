@@ -90,4 +90,10 @@ public class App : Application
     {
         SettingsManager.Save(Settings);
     }
+
+    public static void AppClose()
+    {
+        SettingsManager.Save(Settings);
+        Environment.Exit(0);
+    }
 }

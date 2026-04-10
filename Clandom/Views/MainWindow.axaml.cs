@@ -9,8 +9,6 @@ namespace Clandom.Views;
 
 public partial class MainWindow : AppWindow
 {
-    bool isTransparent = false;
-
     public MainWindow()
     {
         InitializeComponent();
@@ -30,33 +28,28 @@ public partial class MainWindow : AppWindow
 
     private async void Window_OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        e.Cancel = true;
+        var dialog = new ContentDialog()
         {
-            if (isTransparent) return;
-            e.Cancel = true;
-            var dialog = new ContentDialog()
-            {
-                Title = "确认退出？",
-                Content = "如果点击“确定”，悬浮窗将一并关闭，而“最小化到托盘”则不会。",
-                PrimaryButtonText = "取消",
-                SecondaryButtonText = "最小化到托盘",
-                CloseButtonText = "确定",
-                DefaultButton = ContentDialogButton.Secondary
-            };
-            var result = await dialog.ShowAsync(this);
-            if (result == ContentDialogResult.Primary)
-            {
-                return;
-            }
-            if (result == ContentDialogResult.Secondary)
-            {
-                Hide();
-            }
-            else
-            {
-                isTransparent = true;
-                desktop.TryShutdown();
-            }
+            Title = "确认退出？",
+            Content = "如果点击“确定”，悬浮窗将一并关闭，而“最小化到托盘”则不会。",
+            PrimaryButtonText = "取消",
+            SecondaryButtonText = "最小化到托盘",
+            CloseButtonText = "确定",
+            DefaultButton = ContentDialogButton.Secondary
+        };
+        var result = await dialog.ShowAsync(this);
+        if (result == ContentDialogResult.Primary)
+        {
+            return;
+        }
+        if (result == ContentDialogResult.Secondary)
+        {
+            Hide();
+        }
+        else
+        {
+            App.AppClose();
         }
     }
 }
