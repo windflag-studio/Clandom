@@ -2,10 +2,33 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Clandom.Views.Pages.InfoPage">
-    <StackPanel Orientation="Vertical" Margin="8">
-        <TextBlock Text="关于" FontSize="30" HorizontalAlignment="Left" />
-
-    </StackPanel>
+    <UserControl.Resources>
+        <ui:FontIconSource x:Key="Info" Glyph="&#xE946;" FontSize="255" />
+        <ui:SymbolIconSource x:Key="Contact" Symbol="Contact"/>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Styles>
+    <DockPanel Margin="8">
+        <TextBlock DockPanel.Dock="Top" Text="关于" FontSize="30" HorizontalAlignment="Left" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Vertical" Spacing="2">
+            <ui:ImageIcon Source="avares://Clandom/Assets/icon.png" HorizontalAlignment="Center"/>
+            <TextBlock Text="Clandom"/>
+            <ui:SettingsExpander Header="作者" IconSource="{StaticResource Contact}" HorizontalAlignment="Center">
+                <ui:SettingsExpander.Footer>
+                    <HyperlinkButton Content="Windflag-studio" NavigateUri="https://github.com/windflag-studio"/>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+            <ui:SettingsExpander Header="关于" IconSource="{StaticResource Info}" HorizontalAlignment="Center">
+                <ui:SettingsExpander.Footer>
+                    <HyperlinkButton Content="Github页面" NavigateUri="https://github.com/windflag-studio/Clandom"/>
+                </ui:SettingsExpander.Footer>
+            </ui:SettingsExpander>
+        </StackPanel>
+    </DockPanel>
 </UserControl>
