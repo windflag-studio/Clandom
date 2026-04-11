@@ -5,9 +5,37 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Clandom.Models.BalancedRandom
 {
+    /// <summary>
+    /// 平衡随机的附加设置，包含黑/白名单等配置
+    /// </summary>
+    public class BalancedRandSettings
+    {
+        /// <summary>
+        /// 黑名单（禁止抽取的学号/索引）
+        /// </summary>
+        public HashSet<int> Blacklist { get; set; } = new HashSet<int>();
+
+        /// <summary>
+        /// 白名单（额外可抽取的学号/索引，可超出原始范围）
+        /// </summary>
+        public HashSet<int> Whitelist { get; set; } = new HashSet<int>();
+
+        /// <summary>
+        /// 是否仅使用白名单模式（忽略原始范围）
+        /// </summary>
+        public bool WhitelistOnlyMode { get; set; } = false;
+
+        /// <summary>
+        /// 创建一个默认的空设置
+        /// </summary>
+        public static BalancedRandSettings Default => new BalancedRandSettings();
+    }
+
     /// <summary>
     /// 平衡随机抽取数据存储结构
     /// </summary>
@@ -98,12 +126,19 @@ namespace Clandom.Models.BalancedRandom
         }
 
         /// <summary>
-        /// 根据参数生成唯一ID
+        /// 根据参数生成唯一ID（使用SHA256哈希确保唯一性）
         /// </summary>
         public static string GenerateId(string type, params object[] parameters)
         {
             string paramString = string.Join("_", parameters.Select(p => p?.ToString() ?? "null"));
-            return $"{type}_{paramString}";
+            string raw = $"{type}_{paramString}";
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(raw));
+                string hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                // 取前16位作为短ID，保留可读性，同时保证唯一性
+                return $"{type}_{hash.Substring(0, 16)}";
+            }
         }
 
         /// <summary>
@@ -119,21 +154,6 @@ namespace Clandom.Models.BalancedRandom
             {
                 return allData[targetId];
             }
-
-            // 模糊匹配：查找相同类型和相似参数的数据
-            foreach (var data in allData.Values)
-            {
-                if (data.Type == type)
-                {
-                    // 根据类型进行不同的匹配逻辑
-                    if (type == "BalancedRandPlane")
-                    {
-                        // 对于2D类型，检查行列是否匹配
-                        // 这里可以根据需要实现更复杂的匹配逻辑
-                    }
-                }
-            }
-
             return null;
         }
 
@@ -255,7 +275,7 @@ namespace Clandom.Models.BalancedRandom
             return weights;
         }
 
-// 同理修改 GetPlaneConfigDrawCounts 返回 Dictionary<(int, int), int>
+        // 同理修改 GetPlaneConfigDrawCounts 返回 Dictionary<(int, int), int>
 
         /// <summary>
         /// 从指定学号范围中读取抽取次数列表
@@ -486,16 +506,28 @@ namespace Clandom.Models.BalancedRandom
         internal Dictionary<int, int> DrawCounts; // 学号 -> 抽取次数
 
         /// <summary>
-        /// 构造函数
+        /// 构造函数（范围学号，无附加设置）
+        /// </summary>
+        public BalancedRand(int numberRangeStart, int numberRangeEnd,
+            int minPoolSize = 3, int maxGapThreshold = 5,
+            double coldStartBoost = 2.0, double decayFactor = 0.7,
+            bool loadData = true)
+            : this(numberRangeStart, numberRangeEnd, null, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor, loadData)
+        {
+        }
+
+        /// <summary>
+        /// 构造函数（范围学号，带附加设置）
         /// </summary>
         /// <param name="numberRangeStart">学号起始值</param>
         /// <param name="numberRangeEnd">学号结束值</param>
+        /// <param name="settings">附加设置（黑/白名单等）</param>
         /// <param name="minPoolSize">最小候选池大小（默认3）</param>
         /// <param name="maxGapThreshold">最大抽取次数差距阈值（默认5）</param>
         /// <param name="coldStartBoost">冷启动提升系数（默认2.0）</param>
         /// <param name="decayFactor">权重衰减因子（默认0.7）</param>
         /// <param name="loadData">是否从文件加载历史数据（默认true）</param>
-        public BalancedRand(int numberRangeStart, int numberRangeEnd,
+        public BalancedRand(int numberRangeStart, int numberRangeEnd, BalancedRandSettings? settings,
             int minPoolSize = 3, int maxGapThreshold = 5,
             double coldStartBoost = 2.0, double decayFactor = 0.7,
             bool loadData = true)
@@ -523,9 +555,12 @@ namespace Clandom.Models.BalancedRandom
             _numberRangeEnd = numberRangeEnd;
             _type = "BalancedRand_Range";
 
-            // 生成数据ID
+            // 生成数据ID（使用SHA256哈希）
             _dataId = BalancedRandDataManager.GenerateId(_type,
                 numberRangeStart, numberRangeEnd, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor);
+
+            // 应用附加设置
+            ApplySettings(settings);
 
             // 初始化候选池
             UpdateCandidatePool();
@@ -538,15 +573,27 @@ namespace Clandom.Models.BalancedRandom
         }
 
         /// <summary>
-        /// 构造函数（通过列表指定学号）
+        /// 构造函数（列表学号，无附加设置）
+        /// </summary>
+        public BalancedRand(IEnumerable<int> numbers,
+            int minPoolSize = 3, int maxGapThreshold = 5,
+            double coldStartBoost = 2.0, double decayFactor = 0.7,
+            bool loadData = true)
+            : this(numbers, null, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor, loadData)
+        {
+        }
+
+        /// <summary>
+        /// 构造函数（列表学号，带附加设置）
         /// </summary>
         /// <param name="numbers">学号列表</param>
+        /// <param name="settings">附加设置（黑/白名单等）</param>
         /// <param name="minPoolSize">最小候选池大小</param>
         /// <param name="maxGapThreshold">最大抽取次数差距阈值</param>
         /// <param name="coldStartBoost">冷启动提升系数</param>
         /// <param name="decayFactor">权重衰减因子</param>
         /// <param name="loadData">是否从文件加载历史数据（默认true）</param>
-        public BalancedRand(IEnumerable<int> numbers,
+        public BalancedRand(IEnumerable<int> numbers, BalancedRandSettings? settings,
             int minPoolSize = 3, int maxGapThreshold = 5,
             double coldStartBoost = 2.0, double decayFactor = 0.7,
             bool loadData = true)
@@ -571,10 +618,13 @@ namespace Clandom.Models.BalancedRandom
             _numbersList = new List<int>(_allNumbers);
             _type = "BalancedRand_List";
 
-            // 生成数据ID
+            // 生成数据ID（使用SHA256哈希）
             _dataId = BalancedRandDataManager.GenerateId(_type,
                 string.Join(",", _allNumbers.OrderBy(n => n).Take(10)), // 取前10个学号作为标识
                 minPoolSize, maxGapThreshold, coldStartBoost, decayFactor);
+
+            // 应用附加设置
+            ApplySettings(settings);
 
             UpdateCandidatePool();
 
@@ -585,13 +635,27 @@ namespace Clandom.Models.BalancedRandom
             }
         }
 
-        // 在 BalancedRand 类中添加
+        // 内部访问器，供派生类和序列化使用
         protected Dictionary<int, int> GetDrawCounts() => DrawCounts;
         protected Dictionary<int, int> GetLastDrawRound() => _lastDrawRound;
         protected Dictionary<int, double> GetCurrentProbabilities() => CurrentProbabilities;
         protected HashSet<int> GetBlacklist() => _blacklist;
         protected HashSet<int> GetWhitelist() => _whitelist;
         protected bool GetWhitelistOnlyMode() => _whitelistOnlyMode;
+
+        /// <summary>
+        /// 应用附加设置
+        /// </summary>
+        private void ApplySettings(BalancedRandSettings? settings)
+        {
+            if (settings == null) return;
+
+            _blacklist = settings.Blacklist ?? new HashSet<int>();
+            _whitelist = settings.Whitelist ?? new HashSet<int>();
+            _whitelistOnlyMode = settings.WhitelistOnlyMode;
+
+            ValidateBlacklist();
+        }
 
         /// <summary>
         /// 从文件加载数据
@@ -966,160 +1030,6 @@ namespace Clandom.Models.BalancedRandom
             UpdateCandidatePool();
         }
 
-        #region 黑名单/白名单功能
-
-        /// <summary>
-        /// 设置黑名单（禁止抽取的学号）
-        /// </summary>
-        /// <param name="numbers">要加入黑名单的学号</param>
-        public void SetBlacklist(IEnumerable<int> numbers)
-        {
-            _blacklist.Clear();
-            foreach (var number in numbers)
-            {
-                if (_allNumbers.Contains(number))
-                {
-                    _blacklist.Add(number);
-                }
-            }
-
-            ValidateBlacklist();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 添加学号到黑名单
-        /// </summary>
-        /// <param name="numbers">要添加到黑名单的学号</param>
-        public void AddToBlacklist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                if (_allNumbers.Contains(number) && !_blacklist.Contains(number))
-                {
-                    _blacklist.Add(number);
-                }
-            }
-
-            ValidateBlacklist();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 从黑名单中移除学号
-        /// </summary>
-        /// <param name="numbers">要从黑名单中移除的学号</param>
-        public void RemoveFromBlacklist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                _blacklist.Remove(number);
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 清除所有黑名单
-        /// </summary>
-        public void ClearBlacklist()
-        {
-            _blacklist.Clear();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 检查学号是否在黑名单中
-        /// </summary>
-        public bool IsInBlacklist(int number)
-        {
-            return _blacklist.Contains(number);
-        }
-
-        /// <summary>
-        /// 设置白名单（额外可抽取的学号，可以超出原始范围）
-        /// </summary>
-        /// <param name="numbers">要加入白名单的学号</param>
-        public void SetWhitelist(IEnumerable<int> numbers)
-        {
-            _whitelist.Clear();
-            foreach (var number in numbers)
-            {
-                _whitelist.Add(number);
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 添加学号到白名单
-        /// </summary>
-        /// <param name="numbers">要添加到白名单的学号</param>
-        public void AddToWhitelist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                if (!_whitelist.Contains(number))
-                {
-                    _whitelist.Add(number);
-                }
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 从白名单中移除学号
-        /// </summary>
-        /// <param name="numbers">要从白名单中移除的学号</param>
-        public void RemoveFromWhitelist(params int[] numbers)
-        {
-            foreach (var number in numbers)
-            {
-                _whitelist.Remove(number);
-            }
-
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 清除所有白名单
-        /// </summary>
-        public void ClearWhitelist()
-        {
-            _whitelist.Clear();
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 检查学号是否在白名单中
-        /// </summary>
-        public bool IsInWhitelist(int number)
-        {
-            return _whitelist.Contains(number);
-        }
-
-        /// <summary>
-        /// 设置白名单模式
-        /// </summary>
-        /// <param name="whitelistOnly">true: 只从白名单中抽取; false: 正常模式，白名单作为额外候选</param>
-        public void SetWhitelistOnlyMode(bool whitelistOnly)
-        {
-            _whitelistOnlyMode = whitelistOnly;
-            UpdateCandidatePool();
-        }
-
-        /// <summary>
-        /// 验证黑名单的合法性
-        /// </summary>
-        private void ValidateBlacklist()
-        {
-            // 移除不在_allNumbers中的黑名单项
-            _blacklist.RemoveWhere(number => !_allNumbers.Contains(number));
-        }
-
-        #endregion
-
         #region 私有方法
 
         /// <summary>
@@ -1324,6 +1234,15 @@ namespace Clandom.Models.BalancedRandom
             }
         }
 
+        /// <summary>
+        /// 验证黑名单的合法性
+        /// </summary>
+        private void ValidateBlacklist()
+        {
+            // 移除不在_allNumbers中的黑名单项
+            _blacklist.RemoveWhere(number => !_allNumbers.Contains(number));
+        }
+
         #endregion
     }
 
@@ -1337,19 +1256,31 @@ namespace Clandom.Models.BalancedRandom
         private int _rows;
 
         /// <summary>
-        /// 构造函数
+        /// 构造函数（无附加设置）
+        /// </summary>
+        public BalancedRandPlane(int rows, int cols, int minPoolSize = 3,
+            int maxGapThreshold = 5, double coldStartBoost = 2.0,
+            double decayFactor = 0.7, bool loadData = true)
+            : this(rows, cols, null, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor, loadData)
+        {
+        }
+
+        /// <summary>
+        /// 构造函数（带附加设置）
         /// </summary>
         /// <param name="rows">行数</param>
         /// <param name="cols">列数</param>
+        /// <param name="settings">附加设置（黑/白名单等）</param>
         /// <param name="minPoolSize">最小候选池大小</param>
         /// <param name="maxGapThreshold">最大抽取次数差距阈值</param>
         /// <param name="coldStartBoost">冷启动提升系数</param>
         /// <param name="decayFactor">权重衰减因子</param>
         /// <param name="loadData">是否从文件加载历史数据（默认true）</param>
-        public BalancedRandPlane(int rows, int cols, int minPoolSize = 3,
-            int maxGapThreshold = 5, double coldStartBoost = 2.0,
-            double decayFactor = 0.7, bool loadData = true)
-            : base(0, rows * cols - 1, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor, false)
+        public BalancedRandPlane(int rows, int cols, BalancedRandSettings? settings,
+            int minPoolSize = 3, int maxGapThreshold = 5,
+            double coldStartBoost = 2.0, double decayFactor = 0.7,
+            bool loadData = true)
+            : base(0, rows * cols - 1, settings, minPoolSize, maxGapThreshold, coldStartBoost, decayFactor, false)
         {
             _rows = rows;
             _cols = cols;
@@ -1390,11 +1321,7 @@ namespace Clandom.Models.BalancedRandom
             // 调用基类方法
             base.ApplySavedData(savedData);
 
-            // 2D特有的处理逻辑
-            if (savedData.Rows > 0 && savedData.Cols > 0)
-            {
-                // 如果保存的数据中有行列信息，可以在这里处理
-            }
+            // 2D特有的处理逻辑（如有需要可在此添加）
         }
 
         /// <summary>
@@ -1532,93 +1459,5 @@ namespace Clandom.Models.BalancedRandom
 
             return dict;
         }
-
-        #region 2D专用的黑名单/白名单功能（修正转换，使用0-based学号存储）
-
-        /// <summary>
-        /// 设置黑名单位置（通过行列指定，1-based）
-        /// </summary>
-        /// <param name="positions">要禁止的位置列表，每个位置为(行, 列)</param>
-        public void SetBlacklistPositions(IEnumerable<(int row, int col)> positions)
-        {
-            var numbers = positions.Select(p => (p.row - 1) * _cols + (p.col - 1)).ToList();
-            SetBlacklist(numbers);
-        }
-
-        /// <summary>
-        /// 添加位置到黑名单（通过行列指定，1-based）
-        /// </summary>
-        /// <param name="positions">要添加到黑名单的位置</param>
-        public void AddToBlacklistPositions(params (int row, int col)[] positions)
-        {
-            var numbers = positions.Select(p => (p.row - 1) * _cols + (p.col - 1)).ToArray();
-            AddToBlacklist(numbers);
-        }
-
-        /// <summary>
-        /// 从黑名单中移除位置（通过行列指定，1-based）
-        /// </summary>
-        /// <param name="positions">要从黑名单中移除的位置</param>
-        public void RemoveFromBlacklistPositions(params (int row, int col)[] positions)
-        {
-            var numbers = positions.Select(p => (p.row - 1) * _cols + (p.col - 1)).ToArray();
-            RemoveFromBlacklist(numbers);
-        }
-
-        /// <summary>
-        /// 设置白名单位置（通过行列指定，1-based，可以超出原始范围）
-        /// </summary>
-        /// <param name="positions">要加入白名单的位置列表，每个位置为(行, 列)</param>
-        public void SetWhitelistPositions(IEnumerable<(int row, int col)> positions)
-        {
-            var numbers = positions.Select(p => (p.row - 1) * _cols + (p.col - 1)).ToList();
-            SetWhitelist(numbers);
-        }
-
-        /// <summary>
-        /// 添加位置到白名单（通过行列指定，1-based，可以超出原始范围）
-        /// </summary>
-        /// <param name="positions">要添加到白名单的位置</param>
-        public void AddToWhitelistPositions(params (int row, int col)[] positions)
-        {
-            var numbers = positions.Select(p => (p.row - 1) * _cols + (p.col - 1)).ToArray();
-            AddToWhitelist(numbers);
-        }
-
-        /// <summary>
-        /// 从白名单中移除位置（通过行列指定，1-based）
-        /// </summary>
-        /// <param name="positions">要从白名单中移除的位置</param>
-        public void RemoveFromWhitelistPositions(params (int row, int col)[] positions)
-        {
-            var numbers = positions.Select(p => (p.row - 1) * _cols + (p.col - 1)).ToArray();
-            RemoveFromWhitelist(numbers);
-        }
-
-        /// <summary>
-        /// 检查位置是否在黑名单中
-        /// </summary>
-        /// <param name="row">行号（1-based）</param>
-        /// <param name="col">列号（1-based）</param>
-        /// <returns>是否在黑名单中</returns>
-        public bool IsPositionInBlacklist(int row, int col)
-        {
-            int number = (row - 1) * _cols + (col - 1);
-            return IsInBlacklist(number);
-        }
-
-        /// <summary>
-        /// 检查位置是否在白名单中
-        /// </summary>
-        /// <param name="row">行号（1-based）</param>
-        /// <param name="col">列号（1-based）</param>
-        /// <returns>是否在白名单中</returns>
-        public bool IsPositionInWhitelist(int row, int col)
-        {
-            int number = (row - 1) * _cols + (col - 1);
-            return IsInWhitelist(number);
-        }
-
-        #endregion
     }
 }
